@@ -24,8 +24,8 @@ importers:
         specifier: ~2.3.1
         version: 2.3.1
       video-area-selection:
-        specifier: github:selevt/video-area-selection#v0.1.3
-        version: video-area-selector@https://codeload.github.com/selevt/video-area-selection/tar.gz/2878e01fcaff005eb6fadcac6318fc6fd5eabebd
+        specifier: github:selevt/video-area-selection#v0.1.5
+        version: video-area-selector@https://codeload.github.com/selevt/video-area-selection/tar.gz/71e1f93ffb0d79a5147456134ef7904d83b8a91e
     devDependencies:
       '@sveltejs/adapter-static':
         specifier: ^3.0.6
@@ -644,8 +644,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  video-area-selector@https://codeload.github.com/selevt/video-area-selection/tar.gz/2878e01fcaff005eb6fadcac6318fc6fd5eabebd:
-    resolution: {tarball: https://codeload.github.com/selevt/video-area-selection/tar.gz/2878e01fcaff005eb6fadcac6318fc6fd5eabebd}
+  video-area-selector@https://codeload.github.com/selevt/video-area-selection/tar.gz/71e1f93ffb0d79a5147456134ef7904d83b8a91e:
+    resolution: {tarball: https://codeload.github.com/selevt/video-area-selection/tar.gz/71e1f93ffb0d79a5147456134ef7904d83b8a91e}
     version: 1.0.0
 
   vite@6.3.7:
@@ -1169,7 +1169,7 @@ snapshots:
 
   typescript@5.6.3: {}
 
-  video-area-selector@https://codeload.github.com/selevt/video-area-selection/tar.gz/2878e01fcaff005eb6fadcac6318fc6fd5eabebd: {}
+  video-area-selector@https://codeload.github.com/selevt/video-area-selection/tar.gz/71e1f93ffb0d79a5147456134ef7904d83b8a91e: {}
 
   vite@6.3.7:
     dependencies:
