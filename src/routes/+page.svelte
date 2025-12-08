@@ -298,7 +298,7 @@
 
 	.file-drop-area {
 		width: 100%;
-		max-width: 400px;
+		max-width: 600px;
 		margin: 0 auto;
 		padding: 2rem;
 		border-radius: 8px;
@@ -306,6 +306,7 @@
 		transition: all 0.3s ease;
 		background-color: #ffffff;
 		box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+		box-sizing: border-box;
 	}
 
 	.file-drop-area.dragging {
@@ -321,6 +322,8 @@
 		border-radius: 8px;
 		background-color: rgba(0, 0, 0, 0.03);
 		transition: all 0.2s ease;
+		width: 100%;
+		overflow: hidden;
 	}
 
 	.file-input-container:hover {
@@ -335,9 +338,7 @@
 	}
 
 	.file-input-label {
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		display: block;
 		font-size: 1em;
 		color: #666;
 		cursor: pointer;
@@ -345,6 +346,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		min-height: 1.5rem;
+		width: 100%;
 	}
 
 	.file-input-label::before {
