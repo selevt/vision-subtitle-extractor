@@ -49,7 +49,7 @@ export const macCliBackend: Backend = {
 	},
 
 	extract: async (options: MacCliOptions): Promise<MacCliResult> => {
-		const { filePath, outputPath, intervalMs, roi, language, onProgress } = options;
+		const { filePath, outputPath, intervalMs, roi, language, onProgress, substitutions } = options;
 		const args: string[] = [filePath, '--json', '--output', outputPath];
 		if (intervalMs) {
 			// ms to seconds
@@ -61,6 +61,11 @@ export const macCliBackend: Backend = {
 		}
 		if (language) {
 			args.push('--language', language);
+		}
+		if (substitutions) {
+			for (const sub of substitutions) {
+				args.push('--substitution', JSON.stringify(sub));
+			}
 		}
 		console.log('Executing mac-cli with args:', args.join(' '));
 		const command = Command.sidecar('binaries/vision-subtitle-extractor-mac', args);

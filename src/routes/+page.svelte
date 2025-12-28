@@ -14,6 +14,7 @@
 	import { copyFile } from '@tauri-apps/plugin-fs';
 	import { useLocalStorage } from '$lib/useLocalStorage.svelte';
 	import VideoAreaSelector from './VideoAreaSelector.svelte';
+	import Substitutions from './Substitutions.svelte';
 
 	import { convertFileSrc } from '@tauri-apps/api/core';
 
@@ -34,6 +35,7 @@
 	const intervalMsStore = useLocalStorage<number>('intervalMs', DEFAULT_INTERVAL_MS);
 	const roiStore = useLocalStorage<RoiData | undefined>('roi', DEFAULT_ROI, 'json');
 	const selectedLanguageStore = useLocalStorage<string | undefined>('selectedLanguage', undefined);
+	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>('substitutions', [], 'json');
 	let supportedLanguages = $state<SupportedLanguage[]>([]);
 
 	let isDragging = $state(false);
@@ -154,6 +156,7 @@
 				language: hasCapability(backend, Capability.LANGUAGE_SELECTION)
 					? selectedLanguageStore.value
 					: undefined,
+				substitutions: substitutionsStore.value.filter((s) => s.regex.length > 0),
 				onProgress: (progressObj) => {
 					if (typeof progressObj.progressFraction === 'number')
 						progress = progressObj.progressFraction;
@@ -254,6 +257,8 @@
 			>
 		</div>
 	{/if}
+
+	<Substitutions bind:substitutions={substitutionsStore.value} />
 
 	<button onclick={runCmd} disabled={inProgress}
 		>Start extraction {filePath ? `(${filePath})` : ''}</button

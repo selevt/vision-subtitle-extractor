@@ -136,6 +136,11 @@ class JSONLogger: Logger {
     }
 }
 
+struct Substitution: Codable {
+    let regex: String
+    let replacement: String
+}
+
 struct SubtitleExtractorCLI: ParsableCommand {
     @Argument(help: "Path to the video file.")
     var videoPath: String?
@@ -157,6 +162,9 @@ struct SubtitleExtractorCLI: ParsableCommand {
     
     @Flag(name: .long, help: "List supported recognition languages.")
     var listLanguages: Bool = false
+
+    @Option(name: .customLong("substitution"), help: "JSON string of a substitution (regex, replacement). Can be repeated.")
+    var rawSubstitutions: [String] = []
 
     func run() throws {
         let logger: Logger = json ? JSONLogger() : StandardLogger()
@@ -205,6 +213,16 @@ struct SubtitleExtractorCLI: ParsableCommand {
             logger.info("Recognition language: Default")
         }
 
+        var substitutions: [Substitution] = []
+        for rawSub in rawSubstitutions {
+            if let data = rawSub.data(using: .utf8),
+               let sub = try? JSONDecoder().decode(Substitution.self, from: data) {
+                substitutions.append(sub)
+            } else {
+                logger.error("Failed to parse substitution: \(rawSub)")
+            }
+        }
+
         Task {
             do {
                 let extractor = SubtitleExtractor(
@@ -213,6 +231,7 @@ struct SubtitleExtractorCLI: ParsableCommand {
                     outputPath: outputPath,
                     regionOfInterest: regionOfInterest,
                     language: language,
+                    substitutions: substitutions,
                     logger: logger
                 )
                 try await extractor.prepare()
@@ -249,19 +268,21 @@ class SubtitleExtractor {
     private let outputPath: String
     private let regionOfInterest: CGRect?
     private let language: String?
+    private let substitutions: [Substitution]
     private let logger: Logger
     
     private var subtitles: [Subtitle] = []
     private var currentFrameTime: CMTime = .zero
     private var videoDuration: CMTime = .zero
     
-    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, logger: Logger) {
+    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, substitutions: [Substitution] = [], logger: Logger) {
         self.videoURL = URL(fileURLWithPath: videoPath)
         self.asset = AVURLAsset(url: videoURL)
         self.intervalInSeconds = intervalInSeconds
         self.outputPath = outputPath
         self.regionOfInterest = regionOfInterest
         self.language = language
+        self.substitutions = substitutions
         self.logger = logger
         
         // Get video duration - this is now handled in prepare()
@@ -303,7 +324,6 @@ class SubtitleExtractor {
         var framesProcessed = 0
         let progressBarWidth = 30
     // let startTime = Date() // elapsed is now frontend only
-
         while CMTimeCompare(currentFrameTime, videoDuration) < 0 {
             let currentSeconds = CMTimeGetSeconds(currentFrameTime)
             let progressPercent = min(currentSeconds / totalSeconds, 1.0)
@@ -316,7 +336,11 @@ class SubtitleExtractor {
             // Generate image from the current time
             if let image = try? await generateImageFromVideo(at: currentFrameTime) {
                 // Perform OCR on the image
-                let recognizedText = await performOCR(on: image)
+                var recognizedText = await performOCR(on: image)
+
+                for sub in substitutions {
+                    recognizedText = recognizedText.replacingOccurrences(of: sub.regex, with: sub.replacement, options: .regularExpression)
+                }
 
                 if !recognizedText.isEmpty {
                     let startTime = currentFrameTime

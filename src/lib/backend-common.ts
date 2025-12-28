@@ -16,6 +16,8 @@ export interface ExtractOptions {
     framesProcessed?: number;
     totalFrames?: number;
   }) => void;
+
+  substitutions?: { regex: string; replacement: string }[];
 }
 export interface ExtractResult {
   stdout: string;
