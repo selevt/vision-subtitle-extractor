@@ -35,8 +35,16 @@
 	const intervalMsStore = useLocalStorage<number>('intervalMs', DEFAULT_INTERVAL_MS);
 	const roiStore = useLocalStorage<RoiData | undefined>('roi', DEFAULT_ROI, 'json');
 	const selectedLanguageStore = useLocalStorage<string | undefined>('selectedLanguage', undefined);
-	const recognitionLevelStore = useLocalStorage<'fast' | 'accurate'>('recognitionLevel', 'accurate');
-	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>('substitutions', [], 'json');
+	const recognitionLevelStore = useLocalStorage<'fast' | 'accurate'>(
+		'recognitionLevel',
+		'accurate'
+	);
+	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>(
+		'substitutions',
+		[],
+		'json'
+	);
+	const forwardFactorStore = useLocalStorage<number>('forwardFactor', 1);
 	let supportedLanguages = $state<SupportedLanguage[]>([]);
 	let accurateLanguages = $state<SupportedLanguage[]>([]);
 	let fastLanguages = $state<SupportedLanguage[]>([]);
@@ -85,7 +93,10 @@
 	async function loadSupportedLanguages() {
 		try {
 			// If backend supports per-level language lists, fetch both
-			if (hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) && backend.getSupportedLanguagesForLevel) {
+			if (
+				hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) &&
+				backend.getSupportedLanguagesForLevel
+			) {
 				accurateLanguages = await backend.getSupportedLanguagesForLevel('accurate');
 				fastLanguages = await backend.getSupportedLanguagesForLevel('fast');
 				console.log('Loaded accurate languages:', accurateLanguages);
@@ -112,11 +123,11 @@
 	// Check if selected language supports each recognition level
 	const supportsAccurate = $derived(
 		!hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) ||
-		accurateLanguages.some((l) => l.code === selectedLanguageStore.value)
+			accurateLanguages.some((l) => l.code === selectedLanguageStore.value)
 	);
 	const supportsFast = $derived(
 		!hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) ||
-		fastLanguages.some((l) => l.code === selectedLanguageStore.value)
+			fastLanguages.some((l) => l.code === selectedLanguageStore.value)
 	);
 
 	// Auto-switch recognition level if current selection is not supported
@@ -193,6 +204,9 @@
 					? recognitionLevelStore.value
 					: undefined,
 				substitutions: substitutionsStore.value.filter((s) => s.regex.length > 0),
+				forwardFactor: hasCapability(backend, Capability.FORWARD_FACTOR)
+					? forwardFactorStore.value
+					: undefined,
 				onProgress: (progressObj) => {
 					if (typeof progressObj.progressFraction === 'number')
 						progress = progressObj.progressFraction;
@@ -269,9 +283,37 @@
 	{#if hasCapability(backend, Capability.OPTION_INTERVAL)}
 		<div class="row">
 			<label for="interval-input">Interval (ms):</label>
-			<input id="interval-input" inputmode="numeric" bind:value={intervalMsStore.value} />
-			<button type="button" style="margin-left: 8px;" onclick={() => intervalMsStore.reset()}
-				>Reset</button
+			<input
+				id="interval-input"
+				inputmode="numeric"
+				bind:value={intervalMsStore.value}
+				style="width: 70px;"
+			/>
+			{#if hasCapability(backend, Capability.FORWARD_FACTOR)}
+				<span style="margin-left: 16px;"></span>
+				<label
+					for="forward-factor-input"
+					title="When > 1, checks frames ahead for repeated text and skips them. Value = number of intervals to look ahead."
+					style="display: flex; align-items: center;"
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
+					</svg>
+				</label>
+				<input
+					id="forward-factor-input"
+					inputmode="numeric"
+					bind:value={forwardFactorStore.value}
+					style="width: 40px;"
+				/>
+			{/if}
+			<button
+				type="button"
+				style="margin-left: 8px;"
+				onclick={() => {
+					intervalMsStore.reset();
+					if (hasCapability(backend, Capability.FORWARD_FACTOR)) forwardFactorStore.reset();
+				}}>Reset</button
 			>
 		</div>
 	{/if}
