@@ -38,6 +38,8 @@
 	const recognitionLevelStore = useLocalStorage<'fast' | 'accurate'>('recognitionLevel', 'accurate');
 	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>('substitutions', [], 'json');
 	let supportedLanguages = $state<SupportedLanguage[]>([]);
+	let accurateLanguages = $state<SupportedLanguage[]>([]);
+	let fastLanguages = $state<SupportedLanguage[]>([]);
 
 	let isDragging = $state(false);
 	let inProgress = $state(false);
@@ -82,21 +84,51 @@
 
 	async function loadSupportedLanguages() {
 		try {
-			if (backend.getSupportedLanguages) {
+			// If backend supports per-level language lists, fetch both
+			if (hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) && backend.getSupportedLanguagesForLevel) {
+				accurateLanguages = await backend.getSupportedLanguagesForLevel('accurate');
+				fastLanguages = await backend.getSupportedLanguagesForLevel('fast');
+				console.log('Loaded accurate languages:', accurateLanguages);
+				console.log('Loaded fast languages:', fastLanguages);
+				// Use accurate languages as the main list
+				supportedLanguages = accurateLanguages;
+			} else if (backend.getSupportedLanguages) {
+				// Fallback to old method
 				supportedLanguages = await backend.getSupportedLanguages();
 				console.log('Loaded supported languages:', supportedLanguages);
-				// If selectedLanguage is not set or not in the list, pick the first
-				if (
-					!selectedLanguageStore.value ||
-					!supportedLanguages.some((l) => l.code === selectedLanguageStore.value)
-				) {
-					selectedLanguageStore.value = supportedLanguages[0]?.code;
-				}
+			}
+			// If selectedLanguage is not set or not in the list, pick the first
+			if (
+				!selectedLanguageStore.value ||
+				!supportedLanguages.some((l) => l.code === selectedLanguageStore.value)
+			) {
+				selectedLanguageStore.value = supportedLanguages[0]?.code;
 			}
 		} catch (error) {
 			console.error('Failed to load supported languages:', error);
 		}
 	}
+
+	// Check if selected language supports each recognition level
+	const supportsAccurate = $derived(
+		!hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) ||
+		accurateLanguages.some((l) => l.code === selectedLanguageStore.value)
+	);
+	const supportsFast = $derived(
+		!hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) ||
+		fastLanguages.some((l) => l.code === selectedLanguageStore.value)
+	);
+
+	// Auto-switch recognition level if current selection is not supported
+	$effect(() => {
+		if (hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE)) {
+			if (recognitionLevelStore.value === 'fast' && !supportsFast && supportsAccurate) {
+				recognitionLevelStore.value = 'accurate';
+			} else if (recognitionLevelStore.value === 'accurate' && !supportsAccurate && supportsFast) {
+				recognitionLevelStore.value = 'fast';
+			}
+		}
+	});
 
 	async function handleFileSelect() {
 		// Use Tauri's dialog API to get the file path
@@ -262,7 +294,7 @@
 		</div>
 	{/if}
 
-	{#if hasCapability(backend, Capability.RECOGNITION_LEVEL)}
+	{#if hasCapability(backend, Capability.RECOGNITION_LEVEL) && supportsAccurate && supportsFast}
 		<div class="row">
 			<label>Recognition level:</label>
 			<label style="margin-left: 8px;">

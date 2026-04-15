@@ -41,6 +41,10 @@ export enum Capability {
      * Indicates support for recognition level selection (fast vs accurate)
      */
     RECOGNITION_LEVEL = 8,
+    /**
+     * Indicates backend can provide separate language lists per recognition level
+     */
+    RECOGNITION_LEVEL_PER_LANGUAGE = 16,
 }
 
 export interface SupportedLanguage {
@@ -56,6 +60,10 @@ export interface Backend {
      * Get supported recognition languages
      */
     getSupportedLanguages?: () => Promise<SupportedLanguage[]>;
+    /**
+     * Get supported recognition languages for a specific recognition level
+     */
+    getSupportedLanguagesForLevel?: (level: 'fast' | 'accurate') => Promise<SupportedLanguage[]>;
     extract(options: ExtractOptions): Promise<ExtractResult>;
 }
 

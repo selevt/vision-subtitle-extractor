@@ -12,7 +12,7 @@ interface MacCliResult extends ExtractResult {}
 
 export const macCliBackend: Backend = {
 	capabilities:
-		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION | Capability.RECOGNITION_LEVEL,
+		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION | Capability.RECOGNITION_LEVEL | Capability.RECOGNITION_LEVEL_PER_LANGUAGE,
 
 	roiFormat: () => '{leftRel} {bottomRel} {widthRel} {heightRel}',
 
@@ -46,6 +46,40 @@ export const macCliBackend: Backend = {
 		}
 
 		throw new Error('No supported languages found in mac-cli output');
+	},
+
+	getSupportedLanguagesForLevel: async (level: 'fast' | 'accurate'): Promise<SupportedLanguage[]> => {
+		console.log(`Getting supported languages for ${level} recognition from mac-cli`);
+		const command = Command.sidecar('binaries/vision-subtitle-extractor-mac', [
+			'--list-languages',
+			'--json',
+			'--recognition-level',
+			level
+		]);
+		const result = await command.execute();
+		if (result.code !== 0) {
+			console.error(`mac-cli --list-languages --recognition-level ${level} failed:`, result.stderr);
+			throw new Error(`mac-cli --list-languages --recognition-level ${level} failed with code ${result.code}`);
+		}
+
+		const lines = result.stdout.trim().split('\n');
+		for (const line of lines) {
+			try {
+				const jsonData = JSON.parse(line);
+				if (jsonData.type === 'languages' && Array.isArray(jsonData.supportedLanguages)) {
+					const languages: SupportedLanguage[] = jsonData.supportedLanguages.map(
+						(code: string) => ({
+							code
+						})
+					);
+					return languages;
+				}
+			} catch (e) {
+				console.warn('Failed to parse language JSON:', line);
+			}
+		}
+
+		throw new Error(`No supported languages found in mac-cli output for ${level} recognition`);
 	},
 
 	extract: async (options: MacCliOptions): Promise<MacCliResult> => {
