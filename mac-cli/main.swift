@@ -3,6 +3,18 @@ import Vision
 import AVFoundation
 import ArgumentParser
 
+// MARK: - Frame Skip Decision
+
+/// Returns the number of seconds to advance after processing a frame.
+/// When `factor > 1` and both texts are equal and non-empty, returns `interval * (factor + 1)`,
+/// skipping the intermediate frames. Otherwise returns `interval` for a normal linear step.
+func computeFrameAdvance(currentText: String, lookaheadText: String, interval: Double, factor: Int) -> Double {
+    guard factor > 1, !currentText.isEmpty, currentText == lookaheadText else {
+        return interval
+    }
+    return interval * Double(factor + 1)
+}
+
 // MARK: - Logging Protocol and Implementations
 
 protocol Logger {
@@ -169,6 +181,9 @@ struct SubtitleExtractorCLI: ParsableCommand {
     @Option(name: .customLong("substitution"), help: "JSON string of a substitution (regex, replacement). Can be repeated.")
     var rawSubstitutions: [String] = []
 
+    @Option(name: .long, help: "Forward-looking skip factor. Factor N checks N intervals ahead; if text matches, skips the intermediate frames. Default 1 (disabled).")
+    var forwardFactor: Int = 1
+
     func run() throws {
         let logger: Logger = json ? JSONLogger() : StandardLogger()
         
@@ -237,6 +252,7 @@ struct SubtitleExtractorCLI: ParsableCommand {
                     language: language,
                     recognitionLevel: recognitionLevel,
                     substitutions: substitutions,
+                    forwardFactor: forwardFactor,
                     logger: logger
                 )
                 try await extractor.prepare()
@@ -275,13 +291,14 @@ class SubtitleExtractor {
     private let language: String?
     private let recognitionLevel: String
     private let substitutions: [Substitution]
+    private let forwardFactor: Int
     private let logger: Logger
-    
+
     private var subtitles: [Subtitle] = []
     private var currentFrameTime: CMTime = .zero
     private var videoDuration: CMTime = .zero
-    
-    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, recognitionLevel: String = "accurate", substitutions: [Substitution] = [], logger: Logger) {
+
+    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, recognitionLevel: String = "accurate", substitutions: [Substitution] = [], forwardFactor: Int = 1, logger: Logger) {
         self.videoURL = URL(fileURLWithPath: videoPath)
         self.asset = AVURLAsset(url: videoURL)
         self.intervalInSeconds = intervalInSeconds
@@ -290,8 +307,9 @@ class SubtitleExtractor {
         self.language = language
         self.recognitionLevel = recognitionLevel
         self.substitutions = substitutions
+        self.forwardFactor = forwardFactor
         self.logger = logger
-        
+
         // Get video duration - this is now handled in prepare()
     }
     
@@ -331,6 +349,12 @@ class SubtitleExtractor {
         var framesProcessed = 0
         let progressBarWidth = 30
     // let startTime = Date() // elapsed is now frontend only
+
+        // When a lookahead OCR is done and the texts differ, we cache the result so we don't
+        // re-OCR that frame when we reach it linearly. Lookaheads are suppressed until the
+        // cache is consumed, preventing compounding overhead in mismatch regions.
+        var cachedLookahead: (time: CMTime, text: String)? = nil
+
         while CMTimeCompare(currentFrameTime, videoDuration) < 0 {
             let currentSeconds = CMTimeGetSeconds(currentFrameTime)
             let progressPercent = min(currentSeconds / totalSeconds, 1.0)
@@ -340,18 +364,49 @@ class SubtitleExtractor {
             // Calculate elapsed time
             logger.progress(percent: progressPercent, progressBar: progressBar, framesProcessed: framesProcessed, totalFrames: totalFrames)
 
-            // Generate image from the current time
-            if let image = try? await generateImageFromVideo(at: currentFrameTime) {
-                // Perform OCR on the image
-                var recognizedText = await performOCR(on: image)
+            // Obtain recognized text — either from the lookahead cache or fresh OCR.
+            var frameAdvance = intervalInSeconds
+            var recognizedText: String? = nil
 
+            if let cached = cachedLookahead,
+               CMTimeCompare(cached.time, currentFrameTime) == 0 {
+                // This frame was already OCR'd as a lookahead — reuse the result.
+                recognizedText = cached.text
+                cachedLookahead = nil
+            } else if let image = try? await generateImageFromVideo(at: currentFrameTime) {
+                var text = await performOCR(on: image)
                 for sub in substitutions {
-                    recognizedText = recognizedText.replacingOccurrences(of: sub.regex, with: sub.replacement, options: .regularExpression)
+                    text = text.replacingOccurrences(of: sub.regex, with: sub.replacement, options: .regularExpression)
+                }
+                recognizedText = text
+            }
+
+            if let recognizedText {
+                // Forward-looking skip — only attempted when there is no pending cached lookahead.
+                // (If cachedLookahead != nil we are in linear-recovery mode and skip the probe.)
+                if forwardFactor > 1 && !recognizedText.isEmpty && cachedLookahead == nil {
+                    let lookaheadTime = CMTimeAdd(currentFrameTime,
+                        CMTimeMakeWithSeconds(intervalInSeconds * Double(forwardFactor), preferredTimescale: 600))
+                    if CMTimeCompare(lookaheadTime, videoDuration) < 0,
+                       let lookaheadImage = try? await generateImageFromVideo(at: lookaheadTime) {
+                        var lookaheadText = await performOCR(on: lookaheadImage)
+                        for sub in substitutions {
+                            lookaheadText = lookaheadText.replacingOccurrences(of: sub.regex, with: sub.replacement, options: .regularExpression)
+                        }
+                        if recognizedText == lookaheadText {
+                            // Match: skip the intermediate frames.
+                            frameAdvance = intervalInSeconds * Double(forwardFactor + 1)
+                            // No cache needed — we jump past the lookahead position.
+                        } else {
+                            // Mismatch: cache the lookahead so we don't re-OCR it, and step linearly.
+                            cachedLookahead = (time: lookaheadTime, text: lookaheadText)
+                        }
+                    }
                 }
 
                 if !recognizedText.isEmpty {
                     let startTime = currentFrameTime
-                    var endTime = CMTimeAdd(startTime, CMTimeMakeWithSeconds(intervalInSeconds, preferredTimescale: 600))
+                    var endTime = CMTimeAdd(startTime, CMTimeMakeWithSeconds(frameAdvance, preferredTimescale: 600))
 
                     // Ensure endTime doesn't exceed video duration
                     if CMTimeCompare(endTime, videoDuration) > 0 {
@@ -372,9 +427,9 @@ class SubtitleExtractor {
                 }
             }
 
-            framesProcessed += 1
-            // Move to the next time interval
-            currentFrameTime = CMTimeAdd(currentFrameTime, CMTimeMakeWithSeconds(intervalInSeconds, preferredTimescale: 600))
+            framesProcessed += Int(frameAdvance / intervalInSeconds)
+            // Move to the next time interval (may skip multiple intervals when forward factor fires)
+            currentFrameTime = CMTimeAdd(currentFrameTime, CMTimeMakeWithSeconds(frameAdvance, preferredTimescale: 600))
         }
 
         // Print 100% progress at the end

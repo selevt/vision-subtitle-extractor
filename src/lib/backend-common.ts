@@ -20,6 +20,12 @@ export interface ExtractOptions {
   }) => void;
 
   substitutions?: { regex: string; replacement: string }[];
+
+  /**
+   * Forward-looking skip factor. When > 1, checks a frame N intervals ahead;
+   * if text matches, skips the intermediate frames. Default 1 (disabled).
+   */
+  forwardFactor?: number;
 }
 export interface ExtractResult {
   stdout: string;
@@ -45,6 +51,10 @@ export enum Capability {
      * Indicates backend can provide separate language lists per recognition level
      */
     RECOGNITION_LEVEL_PER_LANGUAGE = 16,
+    /**
+     * Indicates support for forward-looking frame skip optimization
+     */
+    FORWARD_FACTOR = 32,
 }
 
 export interface SupportedLanguage {

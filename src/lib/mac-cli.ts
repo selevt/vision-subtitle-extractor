@@ -12,7 +12,7 @@ interface MacCliResult extends ExtractResult {}
 
 export const macCliBackend: Backend = {
 	capabilities:
-		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION | Capability.RECOGNITION_LEVEL | Capability.RECOGNITION_LEVEL_PER_LANGUAGE,
+		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION | Capability.RECOGNITION_LEVEL | Capability.RECOGNITION_LEVEL_PER_LANGUAGE | Capability.FORWARD_FACTOR,
 
 	roiFormat: () => '{leftRel} {bottomRel} {widthRel} {heightRel}',
 
@@ -83,7 +83,7 @@ export const macCliBackend: Backend = {
 	},
 
 	extract: async (options: MacCliOptions): Promise<MacCliResult> => {
-		const { filePath, outputPath, intervalMs, roi, language, recognitionLevel, onProgress, substitutions } = options;
+		const { filePath, outputPath, intervalMs, roi, language, recognitionLevel, onProgress, substitutions, forwardFactor } = options;
 		const args: string[] = [filePath, '--json', '--output', outputPath];
 		if (intervalMs) {
 			// ms to seconds
@@ -103,6 +103,9 @@ export const macCliBackend: Backend = {
 			for (const sub of substitutions) {
 				args.push('--substitution', JSON.stringify(sub));
 			}
+		}
+		if (forwardFactor && forwardFactor > 1) {
+			args.push('--forward-factor', String(forwardFactor));
 		}
 		console.log('Executing mac-cli with args:', args.join(' '));
 		const command = Command.sidecar('binaries/vision-subtitle-extractor-mac', args);
