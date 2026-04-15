@@ -1,82 +1,82 @@
 export interface ExtractOptions {
-  filePath: string;
-  outputPath: string;
+	filePath: string;
+	outputPath: string;
 
-  language?: string;
-  intervalMs?: number;
-  /** region of interest. This is to limit OCR processing to a specific area */
-  roi?: string;
-  /** recognition level: 'fast' or 'accurate' */
-  recognitionLevel?: 'fast' | 'accurate';
+	language?: string;
+	intervalMs?: number;
+	/** region of interest. This is to limit OCR processing to a specific area */
+	roi?: string;
+	/** recognition level: 'fast' or 'accurate' */
+	recognitionLevel?: 'fast' | 'accurate';
 
-  /**
-   * Optional callback to receive progress updates
-   */
-  onProgress?: (progress: {
-    progressFraction: number;
-    percentComplete: number;
-    framesProcessed?: number;
-    totalFrames?: number;
-  }) => void;
+	/**
+	 * Optional callback to receive progress updates
+	 */
+	onProgress?: (progress: {
+		progressFraction: number;
+		percentComplete: number;
+		framesProcessed?: number;
+		totalFrames?: number;
+	}) => void;
 
-  substitutions?: { regex: string; replacement: string }[];
+	substitutions?: { regex: string; replacement: string }[];
 
-  /**
-   * Forward-looking skip factor. When > 1, checks a frame N intervals ahead;
-   * if text matches, skips the intermediate frames. Default 1 (disabled).
-   */
-  forwardFactor?: number;
+	/**
+	 * Forward-looking skip factor. When > 1, checks a frame N intervals ahead;
+	 * if text matches, skips the intermediate frames. Default 1 (disabled).
+	 */
+	forwardFactor?: number;
 }
 export interface ExtractResult {
-  stdout: string;
-  stderr: string;
-  code: number | null;
+	stdout: string;
+	stderr: string;
+	code: number | null;
 }
 
 export enum Capability {
-    OPTION_INTERVAL = 1,
-    /**
-     * Requires implementation of `roiFormat` function as well as support for `roi` option in `extract` function
-     */
-    REGION_OF_INTEREST = 2,
-    /**
-     * Indicates support for language selection
-     */
-    LANGUAGE_SELECTION = 4,
-    /**
-     * Indicates support for recognition level selection (fast vs accurate)
-     */
-    RECOGNITION_LEVEL = 8,
-    /**
-     * Indicates backend can provide separate language lists per recognition level
-     */
-    RECOGNITION_LEVEL_PER_LANGUAGE = 16,
-    /**
-     * Indicates support for forward-looking frame skip optimization
-     */
-    FORWARD_FACTOR = 32,
+	OPTION_INTERVAL = 1,
+	/**
+	 * Requires implementation of `roiFormat` function as well as support for `roi` option in `extract` function
+	 */
+	REGION_OF_INTEREST = 2,
+	/**
+	 * Indicates support for language selection
+	 */
+	LANGUAGE_SELECTION = 4,
+	/**
+	 * Indicates support for recognition level selection (fast vs accurate)
+	 */
+	RECOGNITION_LEVEL = 8,
+	/**
+	 * Indicates backend can provide separate language lists per recognition level
+	 */
+	RECOGNITION_LEVEL_PER_LANGUAGE = 16,
+	/**
+	 * Indicates support for forward-looking frame skip optimization
+	 */
+	FORWARD_FACTOR = 32
 }
 
 export interface SupportedLanguage {
-    code: string;
-    name?: string; // Optional human-readable name
+	code: string;
+	name?: string; // Optional human-readable name
 }
 
 export interface Backend {
-    capabilities: number;
-    /** Format for the region of interest */
-    roiFormat?: () => string;
-    /**
-     * Get supported recognition languages
-     */
-    getSupportedLanguages?: () => Promise<SupportedLanguage[]>;
-    /**
-     * Get supported recognition languages for a specific recognition level
-     */
-    getSupportedLanguagesForLevel?: (level: 'fast' | 'accurate') => Promise<SupportedLanguage[]>;
-    extract(options: ExtractOptions): Promise<ExtractResult>;
+	capabilities: number;
+	/** Format for the region of interest */
+	roiFormat?: () => string;
+	/**
+	 * Get supported recognition languages
+	 */
+	getSupportedLanguages?: () => Promise<SupportedLanguage[]>;
+	/**
+	 * Get supported recognition languages for a specific recognition level
+	 */
+	getSupportedLanguagesForLevel?: (level: 'fast' | 'accurate') => Promise<SupportedLanguage[]>;
+	extract(options: ExtractOptions): Promise<ExtractResult>;
 }
 
 export function hasCapability(backend: Backend, capability: Capability): boolean {
-    return (backend.capabilities & capability) === capability;
+	return (backend.capabilities & capability) === capability;
 }

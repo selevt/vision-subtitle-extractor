@@ -18,6 +18,7 @@ This is a Swift command-line application that uses macOS Vision API for OCR (Opt
 - The program handles command line arguments for video path, interval, and output path
 
 When suggesting changes or improvements to this project, consider:
+
 - Performance optimizations for large video files
 - Improved text recognition accuracy
 - Filter methods to reduce false positives in detected text

@@ -43,31 +43,37 @@ VisionSubtitleExtractor <video_path> [--interval <seconds>] [--output <output_pa
 ### Examples
 
 Extract subtitles from a video with default settings (1 second interval):
+
 ```bash
 VisionSubtitleExtractor /path/to/movie.mp4
 ```
 
 Extract subtitles every 2.5 seconds:
+
 ```bash
 VisionSubtitleExtractor /path/to/movie.mp4 --interval 2.5
 ```
 
 Specify custom output path:
+
 ```bash
 VisionSubtitleExtractor /path/to/movie.mp4 --output /path/to/custom_subtitles.srt
 ```
 
 Use both custom interval and output path:
+
 ```bash
 VisionSubtitleExtractor /path/to/movie.mp4 --interval 2.0 --output /path/to/custom_subtitles.srt
 ```
 
 Specify a region of interest (ROI) for text detection (bottom 30% of the frame):
+
 ```bash
 VisionSubtitleExtractor /path/to/movie.mp4 --roi 0 0 1 0.3
 ```
 
 Combine all options:
+
 ```bash
 VisionSubtitleExtractor /path/to/movie.mp4 --interval 1.5 --output /path/to/custom_subtitles.srt --roi 0 0 1 0.3
 ```

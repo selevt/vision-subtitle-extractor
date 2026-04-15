@@ -1,40 +1,40 @@
 {
-    "configurations": [
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
-            "name": "Debug VisionSubtitleExtractor (mac-cli)",
-            "program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/debug/VisionSubtitleExtractor",
-            "preLaunchTask": "swift: Build Debug VisionSubtitleExtractor (mac-cli)"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
-            "name": "Release VisionSubtitleExtractor (mac-cli)",
-            "program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/release/VisionSubtitleExtractor",
-            "preLaunchTask": "swift: Build Release VisionSubtitleExtractor (mac-cli)"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
-            "name": "Debug vision-subtitle-extractor-mac (mac-cli)",
-            "program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/debug/vision-subtitle-extractor-mac",
-            "preLaunchTask": "swift: Build Debug vision-subtitle-extractor-mac (mac-cli)"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
-            "name": "Release vision-subtitle-extractor-mac (mac-cli)",
-            "program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/release/vision-subtitle-extractor-mac",
-            "preLaunchTask": "swift: Build Release vision-subtitle-extractor-mac (mac-cli)"
-        }
-    ]
+	"configurations": [
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
+			"name": "Debug VisionSubtitleExtractor (mac-cli)",
+			"program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/debug/VisionSubtitleExtractor",
+			"preLaunchTask": "swift: Build Debug VisionSubtitleExtractor (mac-cli)"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
+			"name": "Release VisionSubtitleExtractor (mac-cli)",
+			"program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/release/VisionSubtitleExtractor",
+			"preLaunchTask": "swift: Build Release VisionSubtitleExtractor (mac-cli)"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
+			"name": "Debug vision-subtitle-extractor-mac (mac-cli)",
+			"program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/debug/vision-subtitle-extractor-mac",
+			"preLaunchTask": "swift: Build Debug vision-subtitle-extractor-mac (mac-cli)"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
+			"name": "Release vision-subtitle-extractor-mac (mac-cli)",
+			"program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/release/vision-subtitle-extractor-mac",
+			"preLaunchTask": "swift: Build Release vision-subtitle-extractor-mac (mac-cli)"
+		}
+	]
 }

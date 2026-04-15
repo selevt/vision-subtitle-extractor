@@ -12,7 +12,12 @@ interface MacCliResult extends ExtractResult {}
 
 export const macCliBackend: Backend = {
 	capabilities:
-		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION | Capability.RECOGNITION_LEVEL | Capability.RECOGNITION_LEVEL_PER_LANGUAGE | Capability.FORWARD_FACTOR,
+		Capability.OPTION_INTERVAL |
+		Capability.REGION_OF_INTEREST |
+		Capability.LANGUAGE_SELECTION |
+		Capability.RECOGNITION_LEVEL |
+		Capability.RECOGNITION_LEVEL_PER_LANGUAGE |
+		Capability.FORWARD_FACTOR,
 
 	roiFormat: () => '{leftRel} {bottomRel} {widthRel} {heightRel}',
 
@@ -48,7 +53,9 @@ export const macCliBackend: Backend = {
 		throw new Error('No supported languages found in mac-cli output');
 	},
 
-	getSupportedLanguagesForLevel: async (level: 'fast' | 'accurate'): Promise<SupportedLanguage[]> => {
+	getSupportedLanguagesForLevel: async (
+		level: 'fast' | 'accurate'
+	): Promise<SupportedLanguage[]> => {
 		console.log(`Getting supported languages for ${level} recognition from mac-cli`);
 		const command = Command.sidecar('binaries/vision-subtitle-extractor-mac', [
 			'--list-languages',
@@ -59,7 +66,9 @@ export const macCliBackend: Backend = {
 		const result = await command.execute();
 		if (result.code !== 0) {
 			console.error(`mac-cli --list-languages --recognition-level ${level} failed:`, result.stderr);
-			throw new Error(`mac-cli --list-languages --recognition-level ${level} failed with code ${result.code}`);
+			throw new Error(
+				`mac-cli --list-languages --recognition-level ${level} failed with code ${result.code}`
+			);
 		}
 
 		const lines = result.stdout.trim().split('\n');
@@ -83,7 +92,17 @@ export const macCliBackend: Backend = {
 	},
 
 	extract: async (options: MacCliOptions): Promise<MacCliResult> => {
-		const { filePath, outputPath, intervalMs, roi, language, recognitionLevel, onProgress, substitutions, forwardFactor } = options;
+		const {
+			filePath,
+			outputPath,
+			intervalMs,
+			roi,
+			language,
+			recognitionLevel,
+			onProgress,
+			substitutions,
+			forwardFactor
+		} = options;
 		const args: string[] = [filePath, '--json', '--output', outputPath];
 		if (intervalMs) {
 			// ms to seconds

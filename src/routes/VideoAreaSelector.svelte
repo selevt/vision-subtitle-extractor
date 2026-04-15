@@ -44,7 +44,7 @@
 	const resetSelection = () => {
 		updateSelection(undefined);
 		selector.clearSelection();
-	}
+	};
 
 	$effect(() => {
 		selector = new VideoAreaSelector({
@@ -54,7 +54,7 @@
 					formatted: template ? applyTemplate(template, selectionData) : undefined,
 					selectionData
 				});
-			},
+			}
 		});
 		const initialSelectionData = untrack(() => selection?.selectionData?.absolute);
 		if (initialSelectionData) {
@@ -83,9 +83,7 @@
 		{:else}
 			<button onclick={() => setEnabled(true)}>Enable selection mode</button>
 		{/if}
-		<button type="button" style="margin-left: 8px;" onclick={() => resetSelection()}
-			>Reset</button
-		>
+		<button type="button" style="margin-left: 8px;" onclick={() => resetSelection()}>Reset</button>
 	{/if}
 </div>
 
