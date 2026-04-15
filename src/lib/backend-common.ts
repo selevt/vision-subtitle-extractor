@@ -6,6 +6,8 @@ export interface ExtractOptions {
   intervalMs?: number;
   /** region of interest. This is to limit OCR processing to a specific area */
   roi?: string;
+  /** recognition level: 'fast' or 'accurate' */
+  recognitionLevel?: 'fast' | 'accurate';
 
   /**
    * Optional callback to receive progress updates
@@ -35,6 +37,10 @@ export enum Capability {
      * Indicates support for language selection
      */
     LANGUAGE_SELECTION = 4,
+    /**
+     * Indicates support for recognition level selection (fast vs accurate)
+     */
+    RECOGNITION_LEVEL = 8,
 }
 
 export interface SupportedLanguage {

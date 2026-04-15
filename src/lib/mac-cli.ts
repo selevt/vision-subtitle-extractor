@@ -12,7 +12,7 @@ interface MacCliResult extends ExtractResult {}
 
 export const macCliBackend: Backend = {
 	capabilities:
-		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION,
+		Capability.OPTION_INTERVAL | Capability.REGION_OF_INTEREST | Capability.LANGUAGE_SELECTION | Capability.RECOGNITION_LEVEL,
 
 	roiFormat: () => '{leftRel} {bottomRel} {widthRel} {heightRel}',
 
@@ -49,7 +49,7 @@ export const macCliBackend: Backend = {
 	},
 
 	extract: async (options: MacCliOptions): Promise<MacCliResult> => {
-		const { filePath, outputPath, intervalMs, roi, language, onProgress, substitutions } = options;
+		const { filePath, outputPath, intervalMs, roi, language, recognitionLevel, onProgress, substitutions } = options;
 		const args: string[] = [filePath, '--json', '--output', outputPath];
 		if (intervalMs) {
 			// ms to seconds
@@ -61,6 +61,9 @@ export const macCliBackend: Backend = {
 		}
 		if (language) {
 			args.push('--language', language);
+		}
+		if (recognitionLevel) {
+			args.push('--recognition-level', recognitionLevel);
 		}
 		if (substitutions) {
 			for (const sub of substitutions) {

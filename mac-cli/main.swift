@@ -157,6 +157,9 @@ struct SubtitleExtractorCLI: ParsableCommand {
     @Option(name: [.short, .long], help: "Recognition language code (e.g., 'en-US', 'ko', 'ja')")
     var language: String?
     
+    @Option(name: .long, help: "Text recognition level: 'accurate' or 'fast'. Defaults to 'accurate'.")
+    var recognitionLevel: String = "accurate"
+    
     @Flag(name: .long, help: "Output in JSON format.")
     var json: Bool = false
     
@@ -173,6 +176,7 @@ struct SubtitleExtractorCLI: ParsableCommand {
         if listLanguages {
             // Get supported languages using VNRecognizeTextRequest
             let request = VNRecognizeTextRequest()
+            request.recognitionLevel = recognitionLevel == "fast" ? .fast : .accurate
             
             do {
                 let supportedLanguages = try request.supportedRecognitionLanguages()
@@ -231,6 +235,7 @@ struct SubtitleExtractorCLI: ParsableCommand {
                     outputPath: outputPath,
                     regionOfInterest: regionOfInterest,
                     language: language,
+                    recognitionLevel: recognitionLevel,
                     substitutions: substitutions,
                     logger: logger
                 )
@@ -268,6 +273,7 @@ class SubtitleExtractor {
     private let outputPath: String
     private let regionOfInterest: CGRect?
     private let language: String?
+    private let recognitionLevel: String
     private let substitutions: [Substitution]
     private let logger: Logger
     
@@ -275,13 +281,14 @@ class SubtitleExtractor {
     private var currentFrameTime: CMTime = .zero
     private var videoDuration: CMTime = .zero
     
-    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, substitutions: [Substitution] = [], logger: Logger) {
+    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, recognitionLevel: String = "accurate", substitutions: [Substitution] = [], logger: Logger) {
         self.videoURL = URL(fileURLWithPath: videoPath)
         self.asset = AVURLAsset(url: videoURL)
         self.intervalInSeconds = intervalInSeconds
         self.outputPath = outputPath
         self.regionOfInterest = regionOfInterest
         self.language = language
+        self.recognitionLevel = recognitionLevel
         self.substitutions = substitutions
         self.logger = logger
         
@@ -409,7 +416,8 @@ class SubtitleExtractor {
         
         do {
             let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
+            // Set recognition level based on configuration
+            request.recognitionLevel = recognitionLevel == "fast" ? .fast : .accurate
             request.usesLanguageCorrection = true
             
             // Use configured language or default

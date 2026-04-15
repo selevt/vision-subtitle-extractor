@@ -35,6 +35,7 @@
 	const intervalMsStore = useLocalStorage<number>('intervalMs', DEFAULT_INTERVAL_MS);
 	const roiStore = useLocalStorage<RoiData | undefined>('roi', DEFAULT_ROI, 'json');
 	const selectedLanguageStore = useLocalStorage<string | undefined>('selectedLanguage', undefined);
+	const recognitionLevelStore = useLocalStorage<'fast' | 'accurate'>('recognitionLevel', 'accurate');
 	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>('substitutions', [], 'json');
 	let supportedLanguages = $state<SupportedLanguage[]>([]);
 
@@ -156,6 +157,9 @@
 				language: hasCapability(backend, Capability.LANGUAGE_SELECTION)
 					? selectedLanguageStore.value
 					: undefined,
+				recognitionLevel: hasCapability(backend, Capability.RECOGNITION_LEVEL)
+					? recognitionLevelStore.value
+					: undefined,
 				substitutions: substitutionsStore.value.filter((s) => s.regex.length > 0),
 				onProgress: (progressObj) => {
 					if (typeof progressObj.progressFraction === 'number')
@@ -255,6 +259,20 @@
 				style="margin-left: 8px;"
 				onclick={() => (selectedLanguageStore.value = supportedLanguages[0]?.code)}>Reset</button
 			>
+		</div>
+	{/if}
+
+	{#if hasCapability(backend, Capability.RECOGNITION_LEVEL)}
+		<div class="row">
+			<label>Recognition level:</label>
+			<label style="margin-left: 8px;">
+				<input type="radio" bind:group={recognitionLevelStore.value} value="accurate" />
+				Accurate
+			</label>
+			<label style="margin-left: 8px;">
+				<input type="radio" bind:group={recognitionLevelStore.value} value="fast" />
+				Fast
+			</label>
 		</div>
 	{/if}
 
