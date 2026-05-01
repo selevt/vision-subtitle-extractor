@@ -17,7 +17,8 @@ export const macCliBackend: Backend = {
 		Capability.LANGUAGE_SELECTION |
 		Capability.RECOGNITION_LEVEL |
 		Capability.RECOGNITION_LEVEL_PER_LANGUAGE |
-		Capability.FORWARD_FACTOR,
+		Capability.FORWARD_FACTOR |
+		Capability.START_END_TIME,
 
 	roiFormat: () => '{leftRel} {bottomRel} {widthRel} {heightRel}',
 
@@ -101,7 +102,9 @@ export const macCliBackend: Backend = {
 			recognitionLevel,
 			onProgress,
 			substitutions,
-			forwardFactor
+			forwardFactor,
+			startTimeMs,
+			endTimeMs
 		} = options;
 		const args: string[] = [filePath, '--json', '--output', outputPath];
 		if (intervalMs) {
@@ -125,6 +128,12 @@ export const macCliBackend: Backend = {
 		}
 		if (forwardFactor && forwardFactor > 1) {
 			args.push('--forward-factor', String(forwardFactor));
+		}
+		if (startTimeMs) {
+			args.push('--start-time-ms', String(startTimeMs));
+		}
+		if (endTimeMs) {
+			args.push('--end-time-ms', String(endTimeMs));
 		}
 		console.log('Executing mac-cli with args:', args.join(' '));
 		const command = Command.sidecar('binaries/vision-subtitle-extractor-mac', args);

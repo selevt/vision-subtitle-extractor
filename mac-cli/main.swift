@@ -184,6 +184,12 @@ struct SubtitleExtractorCLI: ParsableCommand {
     @Option(name: .long, help: "Forward-looking skip factor. Factor N checks N intervals ahead; if text matches, skips the intermediate frames. Default 1 (disabled).")
     var forwardFactor: Int = 1
 
+    @Option(name: .long, help: "Start time in milliseconds. Frames before this time will be skipped.")
+    var startTimeMs: Double? = nil
+
+    @Option(name: .long, help: "End time in milliseconds. Frames after this time will be skipped.")
+    var endTimeMs: Double? = nil
+
     func run() throws {
         let logger: Logger = json ? JSONLogger() : StandardLogger()
         
@@ -253,6 +259,8 @@ struct SubtitleExtractorCLI: ParsableCommand {
                     recognitionLevel: recognitionLevel,
                     substitutions: substitutions,
                     forwardFactor: forwardFactor,
+                    startTimeMs: startTimeMs,
+                    endTimeMs: endTimeMs,
                     logger: logger
                 )
                 try await extractor.prepare()
@@ -292,13 +300,15 @@ class SubtitleExtractor {
     private let recognitionLevel: String
     private let substitutions: [Substitution]
     private let forwardFactor: Int
+    private let startTimeMs: Double?
+    private let endTimeMs: Double?
     private let logger: Logger
 
     private var subtitles: [Subtitle] = []
     private var currentFrameTime: CMTime = .zero
     private var videoDuration: CMTime = .zero
 
-    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, recognitionLevel: String = "accurate", substitutions: [Substitution] = [], forwardFactor: Int = 1, logger: Logger) {
+    init(videoPath: String, intervalInSeconds: Double, outputPath: String, regionOfInterest: CGRect? = nil, language: String? = nil, recognitionLevel: String = "accurate", substitutions: [Substitution] = [], forwardFactor: Int = 1, startTimeMs: Double? = nil, endTimeMs: Double? = nil, logger: Logger) {
         self.videoURL = URL(fileURLWithPath: videoPath)
         self.asset = AVURLAsset(url: videoURL)
         self.intervalInSeconds = intervalInSeconds
@@ -308,6 +318,8 @@ class SubtitleExtractor {
         self.recognitionLevel = recognitionLevel
         self.substitutions = substitutions
         self.forwardFactor = forwardFactor
+        self.startTimeMs = startTimeMs
+        self.endTimeMs = endTimeMs
         self.logger = logger
 
         // Get video duration - this is now handled in prepare()
@@ -344,7 +356,28 @@ class SubtitleExtractor {
         // Start at a small offset from zero to avoid "Cannot Open" error with exact zero time
         currentFrameTime = CMTimeMakeWithSeconds(0.1, preferredTimescale: 600)
 
-        let totalSeconds = CMTimeGetSeconds(videoDuration)
+        // Apply start time if specified
+        if let startTimeMs = startTimeMs {
+            let startTimeSeconds = startTimeMs / 1000.0
+            currentFrameTime = CMTimeMakeWithSeconds(startTimeSeconds, preferredTimescale: 600)
+            // Ensure we don't start before 0.1s to avoid "Cannot Open" error
+            if CMTimeCompare(currentFrameTime, CMTimeMakeWithSeconds(0.1, preferredTimescale: 600)) < 0 {
+                currentFrameTime = CMTimeMakeWithSeconds(0.1, preferredTimescale: 600)
+            }
+        }
+
+        // Compute effective end time
+        let effectiveEndTime: CMTime
+        if let endTimeMs = endTimeMs {
+            let endTimeSeconds = endTimeMs / 1000.0
+            effectiveEndTime = CMTimeMakeWithSeconds(endTimeSeconds, preferredTimescale: 600)
+        } else {
+            effectiveEndTime = videoDuration
+        }
+
+        // Store the range start time for progress calculation
+        let rangeStartTime = currentFrameTime
+        let totalSeconds = CMTimeGetSeconds(effectiveEndTime) - CMTimeGetSeconds(rangeStartTime)
         let totalFrames = Int(totalSeconds / intervalInSeconds)
         var framesProcessed = 0
         let progressBarWidth = 30
@@ -355,9 +388,10 @@ class SubtitleExtractor {
         // cache is consumed, preventing compounding overhead in mismatch regions.
         var cachedLookahead: (time: CMTime, text: String)? = nil
 
-        while CMTimeCompare(currentFrameTime, videoDuration) < 0 {
+        while CMTimeCompare(currentFrameTime, effectiveEndTime) < 0 && CMTimeCompare(currentFrameTime, videoDuration) < 0 {
             let currentSeconds = CMTimeGetSeconds(currentFrameTime)
-            let progressPercent = min(currentSeconds / totalSeconds, 1.0)
+            let rangeStartSeconds = CMTimeGetSeconds(rangeStartTime)
+            let progressPercent = min((currentSeconds - rangeStartSeconds) / totalSeconds, 1.0)
             let progressBarFilled = Int(progressPercent * Double(progressBarWidth))
             let progressBar = String(repeating: "█", count: progressBarFilled) + String(repeating: "░", count: progressBarWidth - progressBarFilled)
 

@@ -9,6 +9,11 @@ export interface ExtractOptions {
 	/** recognition level: 'fast' or 'accurate' */
 	recognitionLevel?: 'fast' | 'accurate';
 
+	/** start time in milliseconds - excludes processing before this time */
+	startTimeMs?: number;
+	/** end time in milliseconds - excludes processing after this time */
+	endTimeMs?: number;
+
 	/**
 	 * Optional callback to receive progress updates
 	 */
@@ -54,7 +59,11 @@ export enum Capability {
 	/**
 	 * Indicates support for forward-looking frame skip optimization
 	 */
-	FORWARD_FACTOR = 32
+	FORWARD_FACTOR = 32,
+	/**
+	 * Indicates support for start/end time range filtering
+	 */
+	START_END_TIME = 64
 }
 
 export interface SupportedLanguage {

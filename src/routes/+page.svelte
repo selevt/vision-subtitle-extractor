@@ -45,6 +45,8 @@
 		'json'
 	);
 	const forwardFactorStore = useLocalStorage<number>('forwardFactor', 1);
+	const startTimeMsStore = useLocalStorage<number | undefined>('startTimeMs', undefined);
+	const endTimeMsStore = useLocalStorage<number | undefined>('endTimeMs', undefined);
 	let supportedLanguages = $state<SupportedLanguage[]>([]);
 	let accurateLanguages = $state<SupportedLanguage[]>([]);
 	let fastLanguages = $state<SupportedLanguage[]>([]);
@@ -120,14 +122,54 @@
 		}
 	}
 
+	// Time validation and conversion helper
+	function validateAndUpdateTime(type: 'start' | 'end') {
+		const rawValue = type === 'start' ? startTimeMsStore.value : endTimeMsStore.value;
+		// Handle the case where value might be a string from input binding
+		const inputValue =
+			typeof rawValue === 'string'
+				? parseFloat(rawValue)
+				: rawValue !== undefined
+					? rawValue
+					: undefined;
+		const parsedValue =
+			inputValue !== undefined
+				? typeof inputValue === 'string'
+					? parseFloat(inputValue)
+					: inputValue / 1000
+				: undefined;
+
+		if (parsedValue === undefined || isNaN(parsedValue) || parsedValue < 0) {
+			if (type === 'start') startTimeMsStore.value = undefined;
+			if (type === 'end') endTimeMsStore.value = undefined;
+			return;
+		}
+
+		const msValue = parsedValue * 1000;
+
+		if (type === 'start') {
+			startTimeMsStore.value = msValue;
+			// Validate against end time
+			if (endTimeMsStore.value !== undefined && msValue >= endTimeMsStore.value) {
+				endTimeMsStore.value = undefined;
+			}
+		} else {
+			endTimeMsStore.value = msValue;
+			// Validate against start time
+			if (startTimeMsStore.value !== undefined && msValue <= startTimeMsStore.value) {
+				startTimeMsStore.value = undefined;
+			}
+		}
+	}
+
 	// Check if selected language supports each recognition level
 	const supportsAccurate = $derived(
 		!hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) ||
-			accurateLanguages.some((l) => l.code === selectedLanguageStore.value)
+			accurateLanguages.some((l: SupportedLanguage) => l.code === selectedLanguageStore.value)
 	);
 	const supportsFast = $derived(
 		!hasCapability(backend, Capability.RECOGNITION_LEVEL_PER_LANGUAGE) ||
-			fastLanguages.some((l) => l.code === selectedLanguageStore.value)
+			fastLanguages.some((l: SupportedLanguage) => l.code === selectedLanguageStore.value)
 	);
 
 	// Auto-switch recognition level if current selection is not supported
@@ -206,6 +248,12 @@
 				substitutions: substitutionsStore.value.filter((s) => s.regex.length > 0),
 				forwardFactor: hasCapability(backend, Capability.FORWARD_FACTOR)
 					? forwardFactorStore.value
+					: undefined,
+				startTimeMs: hasCapability(backend, Capability.START_END_TIME)
+					? startTimeMsStore.value
+					: undefined,
+				endTimeMs: hasCapability(backend, Capability.START_END_TIME)
+					? endTimeMsStore.value
 					: undefined,
 				onProgress: (progressObj) => {
 					if (typeof progressObj.progressFraction === 'number')
@@ -315,6 +363,52 @@
 					if (hasCapability(backend, Capability.FORWARD_FACTOR)) forwardFactorStore.reset();
 				}}>Reset</button
 			>
+		</div>
+	{/if}
+
+	{#if hasCapability(backend, Capability.START_END_TIME)}
+		<div class="row">
+			<label for="start-time-input">Start time (s):</label>
+			<input
+				id="start-time-input"
+				inputmode="decimal"
+				pattern="[0-9]*(\.[0-9]*)?"
+				step="0.1"
+				min="0"
+				value={startTimeMsStore.value !== undefined ? startTimeMsStore.value / 1000 : ''}
+				oninput={(e: Event) => {
+					const value = parseFloat((e.target as HTMLInputElement).value);
+					startTimeMsStore.value = isNaN(value) ? undefined : value * 1000;
+				}}
+				onblur={() => validateAndUpdateTime('start')}
+				style="width: 70px;"
+			/>
+			<span style="margin-left: 16px;"></span>
+			<label for="end-time-input">End time (s):</label>
+			<input
+				id="end-time-input"
+				inputmode="decimal"
+				pattern="[0-9]*(\.[0-9]*)?"
+				step="0.1"
+				min="0"
+				value={endTimeMsStore.value !== undefined ? endTimeMsStore.value / 1000 : ''}
+				oninput={(e: Event) => {
+					const value = parseFloat((e.target as HTMLInputElement).value);
+					endTimeMsStore.value = isNaN(value) ? undefined : value * 1000;
+				}}
+				onblur={() => validateAndUpdateTime('end')}
+				style="width: 70px;"
+			/>
+			<button
+				type="button"
+				style="margin-left: 8px;"
+				onclick={() => {
+					startTimeMsStore.reset();
+					endTimeMsStore.reset();
+				}}
+			>
+				Reset
+			</button>
 		</div>
 	{/if}
 
