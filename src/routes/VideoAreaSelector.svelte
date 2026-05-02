@@ -156,7 +156,7 @@
 <div>
 	<div class="video-container">
 		<!-- svelte-ignore a11y_media_has_caption -->
-		<video bind:this={videoElement} controls src={video}></video>
+		<video bind:this={videoElement} controls={!enabled} src={video}></video>
 	</div>
 
 	{#if selectorInstance}
