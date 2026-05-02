@@ -321,10 +321,14 @@
 				template={backend.roiFormat ? backend.roiFormat() : undefined}
 				initialSelection={roiStore.value}
 				canRoi={Boolean(hasCapability(backend, Capability.REGION_OF_INTEREST) && backend.roiFormat)}
+				startTimeMs={startTimeMsStore.value}
+				endTimeMs={endTimeMsStore.value}
+				onStartTimeChange={(v) => (startTimeMsStore.value = v)}
+				onEndTimeChange={(v) => (endTimeMsStore.value = v)}
 				onChange={(e) => {
 					roiStore.value = e;
 				}}
-			></VideoAreaSelector>
+			/>
 		</div>
 	{/if}
 
@@ -366,52 +370,6 @@
 		</div>
 	{/if}
 
-	{#if hasCapability(backend, Capability.START_END_TIME)}
-		<div class="row">
-			<label for="start-time-input">Start time (s):</label>
-			<input
-				id="start-time-input"
-				inputmode="decimal"
-				pattern="[0-9]*(\.[0-9]*)?"
-				step="0.1"
-				min="0"
-				value={startTimeMsStore.value !== undefined ? startTimeMsStore.value / 1000 : ''}
-				oninput={(e: Event) => {
-					const value = parseFloat((e.target as HTMLInputElement).value);
-					startTimeMsStore.value = isNaN(value) ? undefined : value * 1000;
-				}}
-				onblur={() => validateAndUpdateTime('start')}
-				style="width: 70px;"
-			/>
-			<span style="margin-left: 16px;"></span>
-			<label for="end-time-input">End time (s):</label>
-			<input
-				id="end-time-input"
-				inputmode="decimal"
-				pattern="[0-9]*(\.[0-9]*)?"
-				step="0.1"
-				min="0"
-				value={endTimeMsStore.value !== undefined ? endTimeMsStore.value / 1000 : ''}
-				oninput={(e: Event) => {
-					const value = parseFloat((e.target as HTMLInputElement).value);
-					endTimeMsStore.value = isNaN(value) ? undefined : value * 1000;
-				}}
-				onblur={() => validateAndUpdateTime('end')}
-				style="width: 70px;"
-			/>
-			<button
-				type="button"
-				style="margin-left: 8px;"
-				onclick={() => {
-					startTimeMsStore.reset();
-					endTimeMsStore.reset();
-				}}
-			>
-				Reset
-			</button>
-		</div>
-	{/if}
-
 	{#if hasCapability(backend, Capability.LANGUAGE_SELECTION) && supportedLanguages.length > 0}
 		<div class="row">
 			<label for="language-select">Recognition language:</label>
@@ -432,6 +390,7 @@
 
 	{#if hasCapability(backend, Capability.RECOGNITION_LEVEL) && supportsAccurate && supportsFast}
 		<div class="row">
+			<!-- svelte-ignore a11y_label_has_associated_control -->
 			<label>Recognition level:</label>
 			<label style="margin-left: 8px;">
 				<input type="radio" bind:group={recognitionLevelStore.value} value="accurate" />

@@ -18,7 +18,7 @@
 	}
 
 	function activeCount() {
-		return substitutions.filter((s) => s.regex.trim() !== '').length;
+		return substitutions.filter((s: { regex: string }) => s.regex.trim() !== '').length;
 	}
 </script>
 
