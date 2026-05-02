@@ -15,6 +15,7 @@
 
 	let currentTime = $state(0);
 	let timelineScrubber = $state<HTMLDivElement>();
+	let isScrubbing = $state(false);
 
 	// Time update unsubscribe function
 	let unsubscribeTimeUpdate: (() => void) | null = null;
@@ -73,15 +74,30 @@
 
 		const rect = timelineScrubber.getBoundingClientRect();
 		const clickX = event.clientX - rect.left;
-		const percentage = clickX / rect.width;
+		const percentage = Math.min(1, Math.max(0, clickX / rect.width));
 		const newTime = percentage * duration;
 
 		selector.setCurrentTime(newTime);
 	}
 
-	function handleMarkerClick(time: number) {
+	function handleMarkerClick(event: MouseEvent, time: number) {
+		event.stopPropagation();
 		if (selector) {
 			selector.setCurrentTime(time);
+		}
+	}
+
+	function handleMouseDown() {
+		isScrubbing = true;
+	}
+
+	function handleMouseUp() {
+		isScrubbing = false;
+	}
+
+	function handleMouseMove(event: MouseEvent) {
+		if (isScrubbing) {
+			handleScrubberClick(event);
 		}
 	}
 </script>
@@ -89,13 +105,18 @@
 {#if selector}
 	<div class="timeline-controls">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			bind:this={timelineScrubber}
 			class="timeline-scrubber"
 			onclick={handleScrubberClick}
+			onmousedown={handleMouseDown}
+			onmouseup={handleMouseUp}
+			onmousemove={handleMouseMove}
+			onmouseleave={handleMouseUp}
 			role="slider"
 			tabindex="0"
-			aria-label="Video timeline - click to scrub"
+			aria-label="Video timeline - click and drag to scrub"
 			aria-valuemin="0"
 			aria-valuemax={duration}
 			aria-valuenow={currentTime}
@@ -123,7 +144,7 @@
 				<button
 					class="time-marker time-marker-start"
 					style="left: {Math.min(100, Math.max(0, startPosition))}%"
-					onclick={() => handleMarkerClick(startTimeMs! / 1000)}
+					onclick={(e) => handleMarkerClick(e, startTimeMs! / 1000)}
 					aria-label="Start time marker"
 					type="button"
 				></button>
@@ -133,7 +154,7 @@
 				<button
 					class="time-marker time-marker-end"
 					style="left: {Math.min(100, Math.max(0, endPosition))}%"
-					onclick={() => handleMarkerClick(endTimeMs! / 1000)}
+					onclick={(e) => handleMarkerClick(e, endTimeMs! / 1000)}
 					aria-label="End time marker"
 					type="button"
 				></button>

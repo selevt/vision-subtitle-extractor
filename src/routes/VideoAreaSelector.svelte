@@ -100,6 +100,19 @@
 		}
 	};
 
+	// Validate and reset times that exceed video duration
+	$effect(() => {
+		if (videoDuration > 0 && videoDuration !== Infinity) {
+			const maxTimeMs = videoDuration * 1000;
+			if (startTimeMs !== undefined && startTimeMs > maxTimeMs && onStartTimeChange) {
+				onStartTimeChange(undefined);
+			}
+			if (endTimeMs !== undefined && endTimeMs > maxTimeMs && onEndTimeChange) {
+				onEndTimeChange(undefined);
+			}
+		}
+	});
+
 	// Create selector in onMount (component only mounts when filePath is set)
 	onMount(() => {
 		if (videoElement) {
