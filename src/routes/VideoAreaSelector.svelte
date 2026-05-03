@@ -8,6 +8,7 @@
 	} from 'video-area-selection';
 	import { applyTemplate } from 'video-area-selection/format';
 	import VideoTimelineControls from './VideoTimelineControls.svelte';
+	import FramePreview from './FramePreview.svelte';
 
 	interface SelectionData {
 		selectionData: VideoAreaSelectionData;
@@ -15,6 +16,7 @@
 	}
 	let {
 		video,
+		filePath,
 		template,
 		onChange: onChangeCallback,
 		initialSelection,
@@ -22,9 +24,12 @@
 		startTimeMs,
 		endTimeMs,
 		onStartTimeChange,
-		onEndTimeChange
+		onEndTimeChange,
+		language,
+		recognitionLevel
 	}: {
 		video: string;
+		filePath?: string;
 		template?: string;
 		onChange: (data: SelectionData | undefined) => void;
 		initialSelection?: SelectionData;
@@ -33,15 +38,21 @@
 		endTimeMs: number | undefined;
 		onStartTimeChange?: (value: number | undefined) => void;
 		onEndTimeChange?: (value: number | undefined) => void;
+		language?: string;
+		recognitionLevel?: 'fast' | 'accurate';
 	} = $props();
 
-	let videoElement: HTMLVideoElement;
+	let videoElement = $state<HTMLVideoElement>();
 	let selectorInstance = $state<VideoAreaSelector | null>(null);
 
 	let enabled = $state(false);
 
 	let selection = $state<SelectionData | undefined>(initialSelection);
 	let videoDuration = $state(0);
+
+	// Frame preview state
+	let showFramePreview = $state(false);
+	let videoPath = $state<string>('');
 
 	// Handle selection changes from the selector
 	function handleSelectorChange(selectionData: VideoAreaSelectionData) {
@@ -113,11 +124,24 @@
 		}
 	});
 
+	// Use the filePath prop directly if provided, otherwise try to parse from video URL
+	$effect(() => {
+		if (filePath) {
+			// filePath is the actual filesystem path from Tauri dialog
+			videoPath = filePath;
+		} else if (video) {
+			// Fallback: try to extract from video URL
+			let path = video.replace(/^file:\/\//, '').replace(/^tauri:\/\/file:\/\//, '');
+			videoPath = decodeURI(path);
+		}
+	});
+
 	// Create selector in onMount (component only mounts when filePath is set)
 	onMount(() => {
-		if (videoElement) {
+		const el = videoElement;
+		if (el) {
 			selectorInstance = new VideoAreaSelector({
-				videoElement: videoElement,
+				videoElement: el,
 				onChange: handleSelectorChange
 			});
 
@@ -133,13 +157,13 @@
 
 			// Set up duration tracking
 			const updateDuration = () => {
-				if (videoElement.duration && !isNaN(videoElement.duration)) {
-					videoDuration = videoElement.duration;
+				if (el.duration && !isNaN(el.duration)) {
+					videoDuration = el.duration;
 				}
 			};
 
-			videoElement.addEventListener('loadedmetadata', updateDuration);
-			videoElement.addEventListener('durationchange', updateDuration);
+			el.addEventListener('loadedmetadata', updateDuration);
+			el.addEventListener('durationchange', updateDuration);
 			updateDuration();
 		}
 
@@ -227,7 +251,30 @@
 				<button class="btn" onclick={() => setEnabled(true)}>Enable selection</button>
 			{/if}
 			<button type="button" class="btn" onclick={() => resetSelection()}>Reset</button>
+			<button
+				type="button"
+				class="btn icon-btn"
+				onclick={() => (showFramePreview = true)}
+				title="Preview frame at current video time with current ROI"
+			>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path
+						d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+					/>
+				</svg>
+			</button>
 		</div>
+	{/if}
+
+	{#if showFramePreview}
+		<FramePreview
+			{videoPath}
+			roi={selection?.formatted}
+			{language}
+			{recognitionLevel}
+			{videoElement}
+			onClose={() => (showFramePreview = false)}
+		/>
 	{/if}
 </div>
 
@@ -277,6 +324,13 @@
 	.btn:active {
 		background: #d0d0d0;
 	}
+	.icon-btn {
+		padding: 6px 10px;
+	}
+	.icon-btn svg {
+		vertical-align: middle;
+		display: inline-block;
+	}
 	@media (prefers-color-scheme: dark) {
 		video {
 			border-color: #555;
@@ -297,6 +351,7 @@
 		.btn:active {
 			background: #444;
 		}
+
 		.roi-controls button {
 			background: #444;
 			color: #eee;

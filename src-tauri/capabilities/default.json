@@ -10,7 +10,12 @@
 			"identifier": "shell:allow-execute",
 			"allow": [
 				{
-					"name": "binaries/vision-subtitle-extractor-mac",
+					"name": "binaries/mac-frames",
+					"sidecar": true,
+					"args": true
+				},
+				{
+					"name": "binaries/mac-ocr",
 					"sidecar": true,
 					"args": true
 				}
@@ -20,16 +25,25 @@
 			"identifier": "shell:allow-spawn",
 			"allow": [
 				{
-					"name": "binaries/vision-subtitle-extractor-mac",
+					"name": "binaries/mac-frames",
+					"sidecar": true,
+					"args": true
+				},
+				{
+					"name": "binaries/mac-ocr",
 					"sidecar": true,
 					"args": true
 				}
 			]
 		},
 		"shell:default",
+		"shell:allow-stdin-write",
 		"dialog:default",
 		"fs:default",
 		"fs:allow-copy-file",
-		"fs:allow-temp-read-recursive"
+		"fs:allow-temp-read-recursive",
+		"fs:allow-temp-write",
+		"fs:allow-temp-write-recursive",
+		"fs:allow-write-text-file"
 	]
 }
