@@ -24,8 +24,9 @@
 			"args": [],
 			"cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
 			"name": "Debug vision-subtitle-extractor-mac (mac-cli)",
-			"program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/debug/vision-subtitle-extractor-mac",
-			"preLaunchTask": "swift: Build Debug vision-subtitle-extractor-mac (mac-cli)"
+			"preLaunchTask": "swift: Build Debug vision-subtitle-extractor-mac (mac-cli)",
+			"target": "vision-subtitle-extractor-mac",
+			"configuration": "debug"
 		},
 		{
 			"type": "swift",
@@ -33,8 +34,49 @@
 			"args": [],
 			"cwd": "${workspaceFolder:SubtitleExtractor}/mac-cli",
 			"name": "Release vision-subtitle-extractor-mac (mac-cli)",
-			"program": "${workspaceFolder:SubtitleExtractor}/mac-cli/.build/release/vision-subtitle-extractor-mac",
-			"preLaunchTask": "swift: Build Release vision-subtitle-extractor-mac (mac-cli)"
+			"preLaunchTask": "swift: Build Release vision-subtitle-extractor-mac (mac-cli)",
+			"target": "vision-subtitle-extractor-mac",
+			"configuration": "release"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/platforms/mac/frames",
+			"name": "Debug mac-frames (platforms/mac/frames)",
+			"target": "mac-frames",
+			"configuration": "debug",
+			"preLaunchTask": "swift: Build Debug mac-frames (platforms/mac/frames)"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/platforms/mac/frames",
+			"name": "Release mac-frames (platforms/mac/frames)",
+			"target": "mac-frames",
+			"configuration": "release",
+			"preLaunchTask": "swift: Build Release mac-frames (platforms/mac/frames)"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/platforms/mac/ocr",
+			"name": "Debug mac-ocr (platforms/mac/ocr)",
+			"target": "mac-ocr",
+			"configuration": "debug",
+			"preLaunchTask": "swift: Build Debug mac-ocr (platforms/mac/ocr)"
+		},
+		{
+			"type": "swift",
+			"request": "launch",
+			"args": [],
+			"cwd": "${workspaceFolder:SubtitleExtractor}/platforms/mac/ocr",
+			"name": "Release mac-ocr (platforms/mac/ocr)",
+			"target": "mac-ocr",
+			"configuration": "release",
+			"preLaunchTask": "swift: Build Release mac-ocr (platforms/mac/ocr)"
 		}
 	]
 }

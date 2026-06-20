@@ -60,7 +60,7 @@
 	let totalFrames = $state(0);
 	let elapsedMs = $state(0);
 	let _progressStartTime: number | null = null;
-	let _progressTimer: number | null = null;
+	let _progressTimer: ReturnType<typeof setInterval> | null = null;
 
 	let res: ExtractResult | undefined = $state(undefined);
 	let resFilePath = $state('');
@@ -318,11 +318,14 @@
 		<div class="video-area-selector">
 			<VideoAreaSelector
 				video={convertFileSrc(filePath)}
+				{filePath}
 				template={backend.roiFormat ? backend.roiFormat() : undefined}
 				initialSelection={roiStore.value}
 				canRoi={Boolean(hasCapability(backend, Capability.REGION_OF_INTEREST) && backend.roiFormat)}
 				startTimeMs={startTimeMsStore.value}
 				endTimeMs={endTimeMsStore.value}
+				language={selectedLanguageStore.value}
+				recognitionLevel={recognitionLevelStore.value}
 				onStartTimeChange={(v) => (startTimeMsStore.value = v)}
 				onEndTimeChange={(v) => (endTimeMsStore.value = v)}
 				onChange={(e) => {
