@@ -1,5 +1,5 @@
 import type { FileSource } from '../file-source';
-import LocalFileSource from '../../routes/sources/LocalFileSource.svelte';
+import LocalFileSource from './LocalFileSource.svelte';
 
 export const localFileSource: FileSource = {
 	id: 'local',

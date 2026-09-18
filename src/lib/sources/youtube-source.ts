@@ -1,5 +1,5 @@
 import type { FileSource } from '../file-source';
-import YouTubeSource from '../../routes/sources/YouTubeSource.svelte';
+import YouTubeSource from './YouTubeSource.svelte';
 import { isYtDlpAvailable } from './youtube';
 
 export const youtubeSource: FileSource = {
