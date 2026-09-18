@@ -42,6 +42,8 @@
 
 	let selection = $state<SelectionData | undefined>(initialSelection);
 	let videoDuration = $state(0);
+	// Signature of the last selection applied via the effect below
+	let lastApplied = '';
 
 	// Handle selection changes from the selector
 	function handleSelectorChange(selectionData: VideoAreaSelectionData) {
@@ -49,6 +51,9 @@
 			formatted: template ? applyTemplate(template, selectionData) : undefined,
 			selectionData
 		};
+		// Echo-loop guard: when the parent echoes this change back through the
+		// initialSelection prop, the effect below skips because the signature matches.
+		lastApplied = JSON.stringify(selectionData.absolute);
 		onChangeCallback(selection);
 	}
 
@@ -121,16 +126,6 @@
 				onChange: handleSelectorChange
 			});
 
-			// Set initial selection if available
-			const initialSelectionData = initialSelection?.selectionData?.absolute;
-			if (initialSelectionData) {
-				selectorInstance.ready().then(() => {
-					if (selectorInstance) {
-						selectorInstance.setSelection(initialSelectionData as VideoAreaSelection);
-					}
-				});
-			}
-
 			// Set up duration tracking
 			const updateDuration = () => {
 				if (videoElement.duration && !isNaN(videoElement.duration)) {
@@ -150,6 +145,31 @@
 				selectorInstance = null;
 			}
 		};
+	});
+
+	// Apply initialSelection whenever it changes (not only on mount), so a
+	// profile loaded mid-session redraws the selection rectangle.
+	$effect(() => {
+		if (!selectorInstance) return;
+		const signature = JSON.stringify(initialSelection?.selectionData?.absolute);
+		if (signature === lastApplied) return;
+		lastApplied = signature;
+		if (initialSelection?.selectionData?.absolute) {
+			selection = initialSelection;
+			selectorInstance
+				.ready()
+				.then(() => {
+					if (selectorInstance && initialSelection?.selectionData?.absolute) {
+						selectorInstance.setSelection(
+							initialSelection.selectionData.absolute as VideoAreaSelection
+						);
+					}
+				})
+				.catch(console.error);
+		} else if (selection) {
+			selection = undefined;
+			selectorInstance.clearSelection();
+		}
 	});
 </script>
 
