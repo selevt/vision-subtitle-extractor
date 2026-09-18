@@ -9,12 +9,14 @@
 	} from '$lib/backend-common';
 	import macBackend from '$lib/mac-cli';
 	import { tempDir } from '@tauri-apps/api/path';
-	import { open, save } from '@tauri-apps/plugin-dialog';
+	import { save } from '@tauri-apps/plugin-dialog';
 	import { getCurrentWebview } from '@tauri-apps/api/webview';
 	import { copyFile } from '@tauri-apps/plugin-fs';
 	import { useLocalStorage } from '$lib/useLocalStorage.svelte';
 	import VideoAreaSelector from './VideoAreaSelector.svelte';
 	import Substitutions from './Substitutions.svelte';
+	import { getAvailableSources } from '$lib/sources';
+	import type { FileSource, VideoFile } from '$lib/file-source';
 
 	import { convertFileSrc } from '@tauri-apps/api/core';
 
@@ -54,6 +56,13 @@
 	let isDragging = $state(false);
 	let inProgress = $state(false);
 
+	let availableSources = $state<FileSource[]>([]);
+	let activeSourceId = $state('local');
+
+	const activeSource = $derived(
+		availableSources.find((s) => s.id === activeSourceId) ?? availableSources[0]
+	);
+
 	// Progress state
 	let progress = $state(0);
 	let framesProcessed = $state(0);
@@ -74,7 +83,8 @@
 			} else if (event.payload.type === 'drop') {
 				isDragging = false;
 				if (event.payload.paths && event.payload.paths.length > 0) {
-					// Get the first dropped file path
+					// Switch to local source when a file is dropped
+					activeSourceId = 'local';
 					filePath = event.payload.paths[0];
 					const parts = filePath.split('/');
 					fileName = parts[parts.length - 1];
@@ -85,8 +95,16 @@
 		});
 	}
 
+	function handleAcquired(file: VideoFile) {
+		filePath = file.filePath;
+		fileName = file.fileName;
+	}
+
 	$effect(() => {
 		setupDragDrop().catch(console.error);
+		getAvailableSources().then((sources) => {
+			availableSources = sources;
+		});
 		if (hasCapability(backend, Capability.LANGUAGE_SELECTION) && backend.getSupportedLanguages) {
 			loadSupportedLanguages();
 		}
@@ -182,27 +200,6 @@
 			}
 		}
 	});
-
-	async function handleFileSelect() {
-		// Use Tauri's dialog API to get the file path
-		const selected = await open({
-			multiple: false,
-			filters: [
-				{
-					name: 'Video',
-					extensions: ['mp4', 'mov', 'avi', 'm4v', 'mkv']
-				}
-			]
-		});
-
-		if (selected) {
-			// If the user selected a file, update the file path and name
-			filePath = selected as string;
-			// Extract the file name from the path
-			const parts = filePath.split('/');
-			fileName = parts[parts.length - 1];
-		}
-	}
 
 	async function runCmd() {
 		if (!filePath) {
@@ -301,18 +298,21 @@
 <main class="container">
 	<h1>Vision Subtitle Extractor</h1>
 
-	<div class="file-drop-area {isDragging ? 'dragging' : ''}">
-		<button
-			type="button"
-			class="file-input-container"
-			onclick={handleFileSelect}
-			onkeydown={(e) => e.key === 'Enter' && handleFileSelect()}
-		>
-			<span class="file-input-label">
-				{fileName ? fileName : 'Click to choose a video file or drag and drop'}
-			</span>
-		</button>
-	</div>
+	{#if availableSources.length > 1}
+		<div class="source-selector-row">
+			<label for="source-select">Source:</label>
+			<select id="source-select" bind:value={activeSourceId}>
+				{#each availableSources as source (source.id)}
+					<option value={source.id}>{source.label}</option>
+				{/each}
+			</select>
+		</div>
+	{/if}
+
+	{#if activeSource}
+		{@const SourceComp = activeSource.component}
+		<SourceComp onAcquired={handleAcquired} {fileName} {isDragging} />
+	{/if}
 
 	{#if filePath}
 		<div class="video-area-selector">
@@ -446,38 +446,12 @@
 		text-align: center;
 	}
 
-	.file-drop-area {
-		width: 100%;
-		max-width: 600px;
-		margin: 0 auto;
-		padding: 2rem;
-		border-radius: 8px;
-		border: 2px dashed #ccc;
-		transition: all 0.3s ease;
-		background-color: #ffffff;
-		box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
-		box-sizing: border-box;
-	}
-
-	.file-drop-area.dragging {
-		border-color: #396cd8;
-		background-color: rgba(57, 108, 216, 0.05);
-	}
-
-	.file-input-container {
-		position: relative;
-		text-align: center;
-		cursor: pointer;
-		padding: 1rem;
-		border-radius: 8px;
-		background-color: rgba(0, 0, 0, 0.03);
-		transition: all 0.2s ease;
-		width: 100%;
-		overflow: hidden;
-	}
-
-	.file-input-container:hover {
-		background-color: rgba(57, 108, 216, 0.1);
+	.source-selector-row {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		margin-bottom: 0.5rem;
 	}
 
 	.video-area-selector {
@@ -485,46 +459,5 @@
 		max-width: 800px;
 		display: flex;
 		justify-content: center;
-	}
-
-	.file-input-label {
-		display: block;
-		font-size: 1em;
-		color: #666;
-		cursor: pointer;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		min-height: 1.5rem;
-		width: 100%;
-	}
-
-	.file-input-label::before {
-		content: '📁 ';
-		margin-right: 0.5rem;
-	}
-
-	@media (prefers-color-scheme: dark) {
-		.file-drop-area {
-			background-color: #1a1a1a;
-			border-color: #444;
-		}
-
-		.file-drop-area.dragging {
-			border-color: #24c8db;
-			background-color: rgba(36, 200, 219, 0.1);
-		}
-
-		.file-input-container {
-			background-color: rgba(255, 255, 255, 0.05);
-		}
-
-		.file-input-container:hover {
-			background-color: rgba(36, 200, 219, 0.15);
-		}
-
-		.file-input-label {
-			color: #aaa;
-		}
 	}
 </style>

@@ -13,6 +13,11 @@
 					"name": "binaries/vision-subtitle-extractor-mac",
 					"sidecar": true,
 					"args": true
+				},
+				{
+					"name": "yt-dlp",
+					"cmd": "yt-dlp",
+					"args": true
 				}
 			]
 		},
@@ -22,6 +27,11 @@
 				{
 					"name": "binaries/vision-subtitle-extractor-mac",
 					"sidecar": true,
+					"args": true
+				},
+				{
+					"name": "yt-dlp",
+					"cmd": "yt-dlp",
 					"args": true
 				}
 			]
