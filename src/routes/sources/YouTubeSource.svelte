@@ -43,7 +43,6 @@
 <div class="youtube-source">
 	<div class="url-row">
 		<input
-			type="url"
 			bind:value={url}
 			placeholder="https://www.youtube.com/watch?v=..."
 			disabled={isDownloading}
@@ -88,30 +87,14 @@
 
 	.url-row input {
 		flex: 1;
-		padding: 0.5rem;
-		border-radius: 8px;
-		border: 1px solid #ccc;
-		font-size: 1em;
 	}
 
 	.url-row input:disabled {
-		opacity: 0.6;
+		opacity: 0.5;
 	}
 
 	.url-row button {
-		padding: 0.5rem 1rem;
-		border-radius: 8px;
-		border: none;
-		background-color: #396cd8;
-		color: white;
-		cursor: pointer;
-		font-size: 1em;
 		white-space: nowrap;
-	}
-
-	.url-row button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
 	}
 
 	.progress-section {
@@ -152,12 +135,6 @@
 	}
 
 	@media (prefers-color-scheme: dark) {
-		.url-row input {
-			background-color: #1a1a1a;
-			border-color: #444;
-			color: #ddd;
-		}
-
 		.progress-bar-outer {
 			background: #222;
 		}
