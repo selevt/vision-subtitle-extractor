@@ -71,24 +71,31 @@ export async function downloadYouTubeVideo(
 	const tmpDir = await tempDir();
 	const outputTemplate = `${tmpDir}subtitle-extractor-%(id)s.%(ext)s`;
 
+	// Merge the best H.264 video stream with the best m4a audio stream so the
+	// preview has sound. avc1/m4a are the codecs AVFoundation and the webview
+	// reliably decode. Without ffmpeg (needed for the merge) fall back to
+	// combined formats or video-only.
+	const canMerge = await isFfmpegAvailable();
+	const formatExpr = canMerge
+		? 'bv[vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/b/bv[vcodec^=avc1]'
+		: 'b[ext=mp4]/b/bv[vcodec^=avc1]';
+
 	const args = [
-		// Single format download (no merge of separate streams), so progress is
-		// one monotonic stream. Prefers the best H.264 video-only stream —
-		// audio is not needed for OCR, and avc1 is the only codec the OCR CLI
-		// and webview preview reliably decode (AV1/VP9 would break them).
-		// Falls back to a combined format when no video-only H.264 stream
-		// exists or on non-YouTube sites. The downloaded DASH file is remuxed
-		// to a progressive container afterwards (see remuxToProgressiveMp4).
 		'-f',
-		'bv[vcodec^=avc1]/b[ext=mp4]/b',
+		formatExpr,
+		// Only used when the merge expression matched; inert otherwise
+		'--merge-output-format',
+		'mp4',
 		'-o',
 		outputTemplate,
 		'--newline',
 		// yt-dlp suppresses progress output when stdout is not a TTY (as with
-		// spawned pipes), so force it on and use a parseable template
+		// spawned pipes), so force it on. The template tags every line with the
+		// stream's video codec ("none" = audio-only) so both streams of a merge
+		// can be tracked separately and the bar never moves backwards.
 		'--progress',
 		'--progress-template',
-		'download:PROGRESS %(progress._percent_str)s %(progress._speed_str)s ETA %(progress._eta_str)s',
+		'download:PROGRESS %(info.vcodec)s %(progress._percent_str)s %(progress._speed_str)s ETA %(progress._eta_str)s',
 		'--print',
 		'after_move:filepath',
 		url
@@ -98,6 +105,10 @@ export async function downloadYouTubeVideo(
 
 	let lastFilePath = '';
 	let stderr = '';
+	let videoFraction = 0;
+	let audioFraction = 0;
+	let hasAudioStream = false;
+	let reportedFraction = 0;
 
 	command.stdout.addListener('data', (line) => {
 		console.log(`[yt-dlp] ${line}`);
@@ -105,15 +116,34 @@ export async function downloadYouTubeVideo(
 		if (!trimmed) return;
 
 		// Parse progress from PROGRESS lines (--progress-template)
-		const progressMatch = trimmed.match(/^PROGRESS\s+([\d.]+)%\s*(.*)$/);
+		const progressMatch = trimmed.match(/^PROGRESS\s+(\S+)\s+([\d.]+)%\s*(.*)$/);
 		if (progressMatch) {
-			const fraction = parseFloat(progressMatch[1]) / 100;
+			const isAudio = progressMatch[1] === 'none';
+			const fraction = parseFloat(progressMatch[2]) / 100;
 			// Drop placeholder values yt-dlp emits before estimates are known
-			const detail = /Unknown|^NA$/.test(progressMatch[2].trim())
-				? ''
-				: progressMatch[2].trim();
-			const status = detail ? `Downloading (${detail})` : 'Downloading';
-			onProgress?.({ progressFraction: fraction, status });
+			const rawDetail = progressMatch[3].trim();
+			const detail = /Unknown|^NA$/.test(rawDetail) ? '' : rawDetail;
+
+			if (isAudio) {
+				hasAudioStream = true;
+				audioFraction = Math.max(audioFraction, fraction);
+			} else {
+				videoFraction = Math.max(videoFraction, fraction);
+			}
+
+			// Weight both streams of a merged download into one overall value;
+			// the max() keeps the bar from ever moving backwards (e.g. when
+			// the audio stream starts after the video stream already finished)
+			const combined = hasAudioStream
+				? 0.9 * videoFraction + 0.1 * audioFraction
+				: videoFraction;
+			reportedFraction = Math.max(reportedFraction, combined);
+
+			const stream = isAudio ? 'audio' : 'video';
+			const status = detail
+				? `Downloading ${stream} (${detail})`
+				: `Downloading ${stream}`;
+			onProgress?.({ progressFraction: reportedFraction, status });
 			return;
 		}
 
