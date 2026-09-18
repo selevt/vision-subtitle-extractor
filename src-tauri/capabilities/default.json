@@ -13,6 +13,16 @@
 					"name": "binaries/vision-subtitle-extractor-mac",
 					"sidecar": true,
 					"args": true
+				},
+				{
+					"name": "yt-dlp",
+					"cmd": "yt-dlp",
+					"args": true
+				},
+				{
+					"name": "ffmpeg",
+					"cmd": "ffmpeg",
+					"args": true
 				}
 			]
 		},
@@ -23,6 +33,11 @@
 					"name": "binaries/vision-subtitle-extractor-mac",
 					"sidecar": true,
 					"args": true
+				},
+				{
+					"name": "yt-dlp",
+					"cmd": "yt-dlp",
+					"args": true
 				}
 			]
 		},
@@ -30,6 +45,7 @@
 		"dialog:default",
 		"fs:default",
 		"fs:allow-copy-file",
+		"fs:allow-rename",
 		"fs:allow-temp-read-recursive"
 	]
 }
