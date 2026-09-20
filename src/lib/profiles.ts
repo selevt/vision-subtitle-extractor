@@ -3,8 +3,11 @@
  * video sources without re-tuning ROI and other options each time.
  */
 
+import type { RecognitionLevel, Substitution } from './backend-common';
+import type { VideoAreaSelectionData } from 'video-area-selection';
+
 export interface RoiData {
-	selectionData: any; // matches video-area-selection's VideoAreaSelectionData
+	selectionData: VideoAreaSelectionData;
 	formatted?: string;
 }
 
@@ -12,8 +15,8 @@ export interface ProfileSettings {
 	intervalMs: number;
 	roi: RoiData | undefined;
 	selectedLanguage: string | undefined;
-	recognitionLevel: 'fast' | 'accurate';
-	substitutions: { regex: string; replacement: string }[];
+	recognitionLevel: RecognitionLevel;
+	substitutions: Substitution[];
 	forwardFactor: number;
 	startTimeMs: number | undefined;
 	endTimeMs: number | undefined;

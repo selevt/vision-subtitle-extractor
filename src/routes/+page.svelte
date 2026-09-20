@@ -5,6 +5,8 @@
 		hasCapability,
 		type Backend,
 		type ExtractResult,
+		type RecognitionLevel,
+		type Substitution,
 		type SupportedLanguage
 	} from '$lib/backend-common';
 	import macBackend from '$lib/mac-cli';
@@ -34,15 +36,8 @@
 	const intervalMsStore = useLocalStorage<number>('intervalMs', DEFAULT_INTERVAL_MS);
 	const roiStore = useLocalStorage<RoiData | undefined>('roi', DEFAULT_ROI, 'json');
 	const selectedLanguageStore = useLocalStorage<string | undefined>('selectedLanguage', undefined);
-	const recognitionLevelStore = useLocalStorage<'fast' | 'accurate'>(
-		'recognitionLevel',
-		'accurate'
-	);
-	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>(
-		'substitutions',
-		[],
-		'json'
-	);
+	const recognitionLevelStore = useLocalStorage<RecognitionLevel>('recognitionLevel', 'accurate');
+	const substitutionsStore = useLocalStorage<Substitution[]>('substitutions', [], 'json');
 	const forwardFactorStore = useLocalStorage<number>('forwardFactor', 1);
 	const startTimeMsStore = useLocalStorage<number | undefined>('startTimeMs', undefined);
 	const endTimeMsStore = useLocalStorage<number | undefined>('endTimeMs', undefined);

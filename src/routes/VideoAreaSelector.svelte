@@ -7,12 +7,9 @@
 		type VideoAreaSelection
 	} from 'video-area-selection';
 	import { applyTemplate } from 'video-area-selection/format';
+	import type { RoiData } from '$lib/profiles';
 	import VideoTimelineControls from './VideoTimelineControls.svelte';
 
-	interface SelectionData {
-		selectionData: VideoAreaSelectionData;
-		formatted?: string;
-	}
 	let {
 		video,
 		template,
@@ -26,8 +23,8 @@
 	}: {
 		video: string;
 		template?: string;
-		onChange: (data: SelectionData | undefined) => void;
-		initialSelection?: SelectionData;
+		onChange: (data: RoiData | undefined) => void;
+		initialSelection?: RoiData;
 		canRoi?: boolean;
 		startTimeMs: number | undefined;
 		endTimeMs: number | undefined;
@@ -40,7 +37,7 @@
 
 	let enabled = $state(false);
 
-	let selection = $state<SelectionData | undefined>(initialSelection);
+	let selection = $state<RoiData | undefined>(initialSelection);
 	let videoDuration = $state(0);
 	// Signature of the last selection applied via the effect below
 	let lastApplied = '';
