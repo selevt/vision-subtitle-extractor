@@ -41,6 +41,11 @@
 	let videoDuration = $state(0);
 	// Signature of the last selection applied via the effect below
 	let lastApplied = '';
+	// True while a selection is applied programmatically (initialSelection /
+	// profile load). The library re-quantizes coordinates to the display pixel
+	// grid and the current video dimensions, so its echo differs from the stored
+	// value; writing it back would mark loaded profiles as modified.
+	let applyingSelection = false;
 
 	// Handle selection changes from the selector
 	function handleSelectorChange(selectionData: VideoAreaSelectionData) {
@@ -51,7 +56,9 @@
 		// Echo-loop guard: when the parent echoes this change back through the
 		// initialSelection prop, the effect below skips because the signature matches.
 		lastApplied = JSON.stringify(selectionData.absolute);
-		onChangeCallback(selection);
+		// Only propagate user edits. Programmatic applies (profile load) must not
+		// rewrite the stored ROI with the library's re-quantized echo.
+		if (!applyingSelection) onChangeCallback(selection);
 	}
 
 	const setEnabled = (value: boolean) => {
@@ -157,9 +164,14 @@
 				.ready()
 				.then(() => {
 					if (selectorInstance && initialSelection?.selectionData?.absolute) {
-						selectorInstance.setSelection(
-							initialSelection.selectionData.absolute as VideoAreaSelection
-						);
+						applyingSelection = true;
+						try {
+							selectorInstance.setSelection(
+								initialSelection.selectionData.absolute as VideoAreaSelection
+							);
+						} finally {
+							applyingSelection = false;
+						}
 					}
 				})
 				.catch(console.error);

@@ -211,7 +211,7 @@
 
 	function applySettings(s: ProfileSettings) {
 		intervalMsStore.value = s.intervalMs;
-		roiStore.value = s.roi;
+		roiStore.value = s.roi ? JSON.parse(JSON.stringify(s.roi)) : s.roi;
 		selectedLanguageStore.value = s.selectedLanguage;
 		recognitionLevelStore.value = s.recognitionLevel;
 		// Deep copy: substitutions are edited in place by the Substitutions component
