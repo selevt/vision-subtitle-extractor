@@ -7,12 +7,9 @@
 		type VideoAreaSelection
 	} from 'video-area-selection';
 	import { applyTemplate } from 'video-area-selection/format';
+	import type { RoiData } from '$lib/profiles';
 	import VideoTimelineControls from './VideoTimelineControls.svelte';
 
-	interface SelectionData {
-		selectionData: VideoAreaSelectionData;
-		formatted?: string;
-	}
 	let {
 		video,
 		template,
@@ -26,8 +23,8 @@
 	}: {
 		video: string;
 		template?: string;
-		onChange: (data: SelectionData | undefined) => void;
-		initialSelection?: SelectionData;
+		onChange: (data: RoiData | undefined) => void;
+		initialSelection?: RoiData;
 		canRoi?: boolean;
 		startTimeMs: number | undefined;
 		endTimeMs: number | undefined;
@@ -40,8 +37,15 @@
 
 	let enabled = $state(false);
 
-	let selection = $state<SelectionData | undefined>(initialSelection);
+	let selection = $state<RoiData | undefined>(initialSelection);
 	let videoDuration = $state(0);
+	// Signature of the last selection applied via the effect below
+	let lastApplied = '';
+	// True while a selection is applied programmatically (initialSelection /
+	// profile load). The library re-quantizes coordinates to the display pixel
+	// grid and the current video dimensions, so its echo differs from the stored
+	// value; writing it back would mark loaded profiles as modified.
+	let applyingSelection = false;
 
 	// Handle selection changes from the selector
 	function handleSelectorChange(selectionData: VideoAreaSelectionData) {
@@ -49,7 +53,12 @@
 			formatted: template ? applyTemplate(template, selectionData) : undefined,
 			selectionData
 		};
-		onChangeCallback(selection);
+		// Echo-loop guard: when the parent echoes this change back through the
+		// initialSelection prop, the effect below skips because the signature matches.
+		lastApplied = JSON.stringify(selectionData.absolute);
+		// Only propagate user edits. Programmatic applies (profile load) must not
+		// rewrite the stored ROI with the library's re-quantized echo.
+		if (!applyingSelection) onChangeCallback(selection);
 	}
 
 	const setEnabled = (value: boolean) => {
@@ -121,16 +130,6 @@
 				onChange: handleSelectorChange
 			});
 
-			// Set initial selection if available
-			const initialSelectionData = initialSelection?.selectionData?.absolute;
-			if (initialSelectionData) {
-				selectorInstance.ready().then(() => {
-					if (selectorInstance) {
-						selectorInstance.setSelection(initialSelectionData as VideoAreaSelection);
-					}
-				});
-			}
-
 			// Set up duration tracking
 			const updateDuration = () => {
 				if (videoElement.duration && !isNaN(videoElement.duration)) {
@@ -150,6 +149,36 @@
 				selectorInstance = null;
 			}
 		};
+	});
+
+	// Apply initialSelection whenever it changes (not only on mount), so a
+	// profile loaded mid-session redraws the selection rectangle.
+	$effect(() => {
+		if (!selectorInstance) return;
+		const signature = JSON.stringify(initialSelection?.selectionData?.absolute);
+		if (signature === lastApplied) return;
+		lastApplied = signature;
+		if (initialSelection?.selectionData?.absolute) {
+			selection = initialSelection;
+			selectorInstance
+				.ready()
+				.then(() => {
+					if (selectorInstance && initialSelection?.selectionData?.absolute) {
+						applyingSelection = true;
+						try {
+							selectorInstance.setSelection(
+								initialSelection.selectionData.absolute as VideoAreaSelection
+							);
+						} finally {
+							applyingSelection = false;
+						}
+					}
+				})
+				.catch(console.error);
+		} else if (selection) {
+			selection = undefined;
+			selectorInstance.clearSelection();
+		}
 	});
 </script>
 

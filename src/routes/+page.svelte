@@ -5,6 +5,8 @@
 		hasCapability,
 		type Backend,
 		type ExtractResult,
+		type RecognitionLevel,
+		type Substitution,
 		type SupportedLanguage
 	} from '$lib/backend-common';
 	import macBackend from '$lib/mac-cli';
@@ -15,17 +17,14 @@
 	import { useLocalStorage } from '$lib/useLocalStorage.svelte';
 	import VideoAreaSelector from './VideoAreaSelector.svelte';
 	import Substitutions from './Substitutions.svelte';
+	import Profiles from './Profiles.svelte';
 	import { getAvailableSources } from '$lib/sources';
 	import type { FileSource, VideoFile } from '$lib/file-source';
+	import { settingsEqual, type Profile, type ProfileSettings, type RoiData } from '$lib/profiles';
 
 	import { convertFileSrc } from '@tauri-apps/api/core';
 
 	import './base.css';
-
-	interface RoiData {
-		selectionData: any;
-		formatted?: string;
-	}
 
 	const backend: Backend = macBackend;
 
@@ -37,18 +36,13 @@
 	const intervalMsStore = useLocalStorage<number>('intervalMs', DEFAULT_INTERVAL_MS);
 	const roiStore = useLocalStorage<RoiData | undefined>('roi', DEFAULT_ROI, 'json');
 	const selectedLanguageStore = useLocalStorage<string | undefined>('selectedLanguage', undefined);
-	const recognitionLevelStore = useLocalStorage<'fast' | 'accurate'>(
-		'recognitionLevel',
-		'accurate'
-	);
-	const substitutionsStore = useLocalStorage<{ regex: string; replacement: string }[]>(
-		'substitutions',
-		[],
-		'json'
-	);
+	const recognitionLevelStore = useLocalStorage<RecognitionLevel>('recognitionLevel', 'accurate');
+	const substitutionsStore = useLocalStorage<Substitution[]>('substitutions', [], 'json');
 	const forwardFactorStore = useLocalStorage<number>('forwardFactor', 1);
 	const startTimeMsStore = useLocalStorage<number | undefined>('startTimeMs', undefined);
 	const endTimeMsStore = useLocalStorage<number | undefined>('endTimeMs', undefined);
+	const profilesStore = useLocalStorage<Profile[]>('profiles', [], 'json');
+	const activeProfileStore = useLocalStorage<string | undefined>('activeProfile', undefined);
 	let supportedLanguages = $state<SupportedLanguage[]>([]);
 	let accurateLanguages = $state<SupportedLanguage[]>([]);
 	let fastLanguages = $state<SupportedLanguage[]>([]);
@@ -201,6 +195,87 @@
 		}
 	});
 
+	// Profiles: capture/apply the full settings bundle
+	function captureSettings(): ProfileSettings {
+		return {
+			intervalMs: intervalMsStore.value,
+			roi: roiStore.value,
+			selectedLanguage: selectedLanguageStore.value,
+			recognitionLevel: recognitionLevelStore.value,
+			substitutions: substitutionsStore.value,
+			forwardFactor: forwardFactorStore.value,
+			startTimeMs: startTimeMsStore.value,
+			endTimeMs: endTimeMsStore.value
+		};
+	}
+
+	function applySettings(s: ProfileSettings) {
+		intervalMsStore.value = s.intervalMs;
+		roiStore.value = s.roi ? JSON.parse(JSON.stringify(s.roi)) : s.roi;
+		selectedLanguageStore.value = s.selectedLanguage;
+		recognitionLevelStore.value = s.recognitionLevel;
+		// Deep copy: substitutions are edited in place by the Substitutions component
+		substitutionsStore.value = JSON.parse(JSON.stringify(s.substitutions));
+		forwardFactorStore.value = s.forwardFactor;
+		startTimeMsStore.value = s.startTimeMs;
+		endTimeMsStore.value = s.endTimeMs;
+	}
+
+	// Deep copy so later in-place edits to current settings never mutate a saved profile
+	function snapshotSettings(): ProfileSettings {
+		return JSON.parse(JSON.stringify(captureSettings())) as ProfileSettings;
+	}
+
+	const profileNames = $derived(profilesStore.value.map((p) => p.name));
+	const activeProfileDef = $derived(
+		profilesStore.value.find((p) => p.name === activeProfileStore.value)
+	);
+	const isModified = $derived(
+		Boolean(activeProfileDef && !settingsEqual(captureSettings(), activeProfileDef.settings))
+	);
+
+	function loadProfile(name: string) {
+		const profile = profilesStore.value.find((p) => p.name === name);
+		if (!profile) return;
+		applySettings(profile.settings);
+		activeProfileStore.value = name;
+	}
+
+	function saveAsProfile(name: string) {
+		const trimmed = name.trim();
+		if (!trimmed) return;
+		const profile: Profile = {
+			name: trimmed,
+			settings: snapshotSettings(),
+			updatedAt: Date.now()
+		};
+		const existingIndex = profilesStore.value.findIndex((p) => p.name === trimmed);
+		if (existingIndex >= 0) {
+			const updated = [...profilesStore.value];
+			updated[existingIndex] = profile;
+			profilesStore.value = updated;
+		} else {
+			profilesStore.value = [...profilesStore.value, profile];
+		}
+		activeProfileStore.value = trimmed;
+	}
+
+	function updateActiveProfile() {
+		if (!activeProfileDef) return;
+		profilesStore.value = profilesStore.value.map((p) =>
+			p.name === activeProfileDef.name
+				? { ...p, settings: snapshotSettings(), updatedAt: Date.now() }
+				: p
+		);
+	}
+
+	function deleteProfile(name: string) {
+		profilesStore.value = profilesStore.value.filter((p) => p.name !== name);
+		if (activeProfileStore.value === name) {
+			activeProfileStore.value = undefined;
+		}
+	}
+
 	async function runCmd() {
 		if (!filePath) {
 			alert('Please select a video file first');
@@ -297,6 +372,16 @@
 
 <main class="container">
 	<h1>Vision Subtitle Extractor</h1>
+
+	<Profiles
+		{profileNames}
+		bind:activeProfile={activeProfileStore.value}
+		{isModified}
+		onLoad={loadProfile}
+		onSaveAs={saveAsProfile}
+		onUpdate={updateActiveProfile}
+		onDelete={deleteProfile}
+	/>
 
 	{#if availableSources.length > 1}
 		<div class="source-selector-row">

@@ -1,3 +1,10 @@
+export type RecognitionLevel = 'fast' | 'accurate';
+
+export interface Substitution {
+	regex: string;
+	replacement: string;
+}
+
 export interface ExtractOptions {
 	filePath: string;
 	outputPath: string;
@@ -6,8 +13,7 @@ export interface ExtractOptions {
 	intervalMs?: number;
 	/** region of interest. This is to limit OCR processing to a specific area */
 	roi?: string;
-	/** recognition level: 'fast' or 'accurate' */
-	recognitionLevel?: 'fast' | 'accurate';
+	recognitionLevel?: RecognitionLevel;
 
 	/** start time in milliseconds - excludes processing before this time */
 	startTimeMs?: number;
@@ -24,7 +30,7 @@ export interface ExtractOptions {
 		totalFrames?: number;
 	}) => void;
 
-	substitutions?: { regex: string; replacement: string }[];
+	substitutions?: Substitution[];
 
 	/**
 	 * Forward-looking skip factor. When > 1, checks a frame N intervals ahead;
@@ -82,7 +88,7 @@ export interface Backend {
 	/**
 	 * Get supported recognition languages for a specific recognition level
 	 */
-	getSupportedLanguagesForLevel?: (level: 'fast' | 'accurate') => Promise<SupportedLanguage[]>;
+	getSupportedLanguagesForLevel?: (level: RecognitionLevel) => Promise<SupportedLanguage[]>;
 	extract(options: ExtractOptions): Promise<ExtractResult>;
 }
 

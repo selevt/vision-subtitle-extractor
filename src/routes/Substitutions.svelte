@@ -1,8 +1,5 @@
 <script lang="ts">
-	interface Substitution {
-		regex: string;
-		replacement: string;
-	}
+	import type { Substitution } from '$lib/backend-common';
 
 	let { substitutions = $bindable() } = $props<{ substitutions: Substitution[] }>();
 	let showSubstitutions = $state(false);

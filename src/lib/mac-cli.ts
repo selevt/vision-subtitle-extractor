@@ -4,6 +4,7 @@ import {
 	type ExtractResult,
 	type Backend,
 	type SupportedLanguage,
+	type RecognitionLevel,
 	Capability
 } from './backend-common';
 
@@ -54,9 +55,7 @@ export const macCliBackend: Backend = {
 		throw new Error('No supported languages found in mac-cli output');
 	},
 
-	getSupportedLanguagesForLevel: async (
-		level: 'fast' | 'accurate'
-	): Promise<SupportedLanguage[]> => {
+	getSupportedLanguagesForLevel: async (level: RecognitionLevel): Promise<SupportedLanguage[]> => {
 		console.log(`Getting supported languages for ${level} recognition from mac-cli`);
 		const command = Command.sidecar('binaries/vision-subtitle-extractor-mac', [
 			'--list-languages',
